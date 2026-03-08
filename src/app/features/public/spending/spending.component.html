@@ -1,0 +1,220 @@
+<div class="page-container">
+
+  <!-- Header -->
+  <div class="page-header fade-in">
+    <div class="header-text">
+      <h1>{{ 'expenditure.title' | translate }}</h1>
+      <p class="subtitle">Select a project to view its expenditures</p>
+    </div>
+  </div>
+
+  <!-- Project selector -->
+  <ng-container *ngIf="!selectedProject">
+
+    <div *ngIf="projectsLoading" class="state-container">
+      <mat-spinner diameter="48"></mat-spinner>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+
+    <div *ngIf="!projectsLoading && projects.length === 0" class="state-container">
+      <mat-icon>folder_open</mat-icon>
+      <p>{{ 'project.noProjects' | translate }}</p>
+    </div>
+
+    <div *ngIf="!projectsLoading && projects.length > 0">
+      <p class="select-hint">Choose a project to view its spending records:</p>
+      <div class="project-selector-grid">
+        <div class="project-select-card fade-in"
+             *ngFor="let p of projects"
+             (click)="selectProject(p)">
+          <div class="select-card-top">
+            <div class="select-card-meta">
+              <span class="project-code">{{ p.projectCode }}</span>
+              <vp-status-badge [status]="p.status"
+                [label]="'project.statuses.' + p.status | translate">
+              </vp-status-badge>
+            </div>
+            <h4 class="project-name">{{ label(p.nameEn, p.nameHi) }}</h4>
+            <p class="project-location" *ngIf="p.locationEn">
+              <mat-icon>location_on</mat-icon>
+              {{ label(p.locationEn, p.locationHi) }}
+            </p>
+          </div>
+          <div class="select-card-bottom">
+            <span class="budget-label">{{ 'project.spent' | translate }}</span>
+            <span class="budget-value">{{ p.totalSpent | inr }}</span>
+            <span class="budget-total"> / {{ p.allocatedBudget | inr }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </ng-container>
+
+  <!-- Expenditure view for selected project -->
+  <ng-container *ngIf="selectedProject">
+
+    <!-- Selected project banner -->
+    <div class="selected-project-banner fade-in">
+      <button mat-icon-button (click)="clearProject()" class="back-btn">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div class="banner-info">
+        <span class="banner-code">{{ selectedProject.projectCode }}</span>
+        <h3 class="banner-name">{{ label(selectedProject.nameEn, selectedProject.nameHi) }}</h3>
+      </div>
+      <div class="banner-budget">
+        <span class="banner-budget-label">Total Spent</span>
+        <span class="banner-budget-value">{{ selectedProject.totalSpent | inr }}</span>
+      </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div *ngIf="!loading && expenditures.length > 0" class="summary-row fade-in">
+      <div class="summary-card total">
+        <mat-icon>payments</mat-icon>
+        <div>
+          <span class="summary-label">Page Total</span>
+          <span class="summary-value">{{ totalAmount | inr }}</span>
+        </div>
+      </div>
+      <div class="summary-card verified">
+        <mat-icon>verified</mat-icon>
+        <div>
+          <span class="summary-label">{{ 'expenditure.verified' | translate }}</span>
+          <span class="summary-value">{{ verifiedCount }}</span>
+        </div>
+      </div>
+      <div class="summary-card pending">
+        <mat-icon>pending</mat-icon>
+        <div>
+          <span class="summary-label">{{ 'expenditure.pending' | translate }}</span>
+          <span class="summary-value">{{ pendingCount }}</span>
+        </div>
+      </div>
+      <div class="summary-card records">
+        <mat-icon>receipt_long</mat-icon>
+        <div>
+          <span class="summary-label">Total Records</span>
+          <span class="summary-value">{{ totalElements }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-bar fade-in">
+      <mat-form-field appearance="outline" class="filter-search">
+        <mat-label>{{ 'common.search' | translate }}</mat-label>
+        <input matInput [(ngModel)]="searchTerm"
+               placeholder="Voucher, contractor, description…">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filter-select">
+        <mat-label>{{ 'expenditure.paymentMode' | translate }}</mat-label>
+        <mat-select [(ngModel)]="selectedMode">
+          <mat-option value="">{{ 'common.all' | translate }}</mat-option>
+          <mat-option *ngFor="let m of paymentModes" [value]="m">
+            {{ 'expenditure.modes.' + m | translate }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="loading" class="state-container">
+      <mat-spinner diameter="48"></mat-spinner>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+
+    <!-- Error -->
+    <div *ngIf="!loading && error" class="state-container error-state">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ 'common.error' | translate }}</p>
+      <button mat-raised-button color="primary" (click)="loadExpenditures()">Retry</button>
+    </div>
+
+    <!-- Empty -->
+    <div *ngIf="!loading && !error && expenditures.length === 0" class="state-container">
+      <mat-icon>receipt_long</mat-icon>
+      <p>No expenditure records found for this project.</p>
+    </div>
+
+    <!-- Table -->
+    <div *ngIf="!loading && !error && filteredExpenditures.length > 0"
+         class="table-wrapper fade-in">
+      <table mat-table [dataSource]="filteredExpenditures" class="spending-table">
+
+        <ng-container matColumnDef="voucher">
+          <th mat-header-cell *matHeaderCellDef>{{ 'expenditure.voucher' | translate }}</th>
+          <td mat-cell *matCellDef="let e">
+            <span class="voucher-number">{{ e.voucherNumber || '—' }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="contractor">
+          <th mat-header-cell *matHeaderCellDef>{{ 'contractor.name' | translate }}</th>
+          <td mat-cell *matCellDef="let e">{{ e.contractorNameEn || '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="amount">
+          <th mat-header-cell *matHeaderCellDef>{{ 'expenditure.amount' | translate }}</th>
+          <td mat-cell *matCellDef="let e">
+            <span class="amount-value">{{ e.amount | inr }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="mode">
+          <th mat-header-cell *matHeaderCellDef>{{ 'expenditure.paymentMode' | translate }}</th>
+          <td mat-cell *matCellDef="let e">
+            <span class="mode-chip">
+              <mat-icon>{{ getModeIcon(e.paymentMode) }}</mat-icon>
+              {{ 'expenditure.modes.' + e.paymentMode | translate }}
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="date">
+          <th mat-header-cell *matHeaderCellDef>{{ 'expenditure.paymentDate' | translate }}</th>
+          <td mat-cell *matCellDef="let e">{{ e.paymentDate | date:'mediumDate' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="year">
+          <th mat-header-cell *matHeaderCellDef>{{ 'expenditure.financialYear' | translate }}</th>
+          <td mat-cell *matCellDef="let e">
+            <span class="year-chip">{{ e.financialYear }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="verified">
+          <th mat-header-cell *matHeaderCellDef>{{ 'expenditure.verified' | translate }}</th>
+          <td mat-cell *matCellDef="let e">
+            <span class="verified-chip" [class.yes]="e.isVerified" [class.no]="!e.isVerified">
+              <mat-icon>{{ e.isVerified ? 'verified' : 'pending' }}</mat-icon>
+              {{ e.isVerified ? ('expenditure.verified' | translate) : ('expenditure.pending' | translate) }}
+            </span>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="['voucher','contractor','amount','mode','date','year','verified']"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['voucher','contractor','amount','mode','date','year','verified']"
+            class="table-row"></tr>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="totalPages > 1" class="pagination">
+      <button mat-icon-button [disabled]="page === 0" (click)="goToPage(page - 1)">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <button mat-button *ngFor="let p of pages"
+              [class.active-page]="p === page"
+              (click)="goToPage(p)">{{ p + 1 }}</button>
+      <button mat-icon-button [disabled]="page === totalPages - 1" (click)="goToPage(page + 1)">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+
+  </ng-container>
+
+</div>

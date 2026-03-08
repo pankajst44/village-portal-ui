@@ -1,0 +1,79 @@
+:host { display: block; }
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: var(--header-height);
+  padding: 0 var(--space-md);
+  background: var(--color-primary) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.menu-btn { color: #fff; margin-right: var(--space-xs); }
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  user-select: none;
+
+  .brand-icon  { font-size: 1.4rem; line-height: 1; }
+
+  .brand-name  {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.01em;
+  }
+
+  .brand-tagline {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.65);
+    margin-left: var(--space-xs);
+    border-left: 1px solid rgba(255,255,255,0.3);
+    padding-left: var(--space-sm);
+    letter-spacing: 0.04em;
+  }
+}
+
+.spacer { flex: 1; }
+
+.user-btn {
+  color: #fff !important;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 var(--space-sm);
+
+  .user-name { font-size: 0.88rem; font-weight: 500; }
+  .chevron   { font-size: 18px; width: 18px; height: 18px; opacity: 0.8; }
+}
+
+.user-menu-header {
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  strong { font-size: 0.9rem; color: var(--color-text); }
+
+  .role-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: var(--color-primary-50);
+    color: var(--color-primary);
+    padding: 1px 8px;
+    border-radius: 10px;
+    width: fit-content;
+    margin-top: 2px;
+  }
+}

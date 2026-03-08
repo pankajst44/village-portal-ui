@@ -1,0 +1,24 @@
+<div class="shell-wrapper">
+
+  <!-- ── Top header bar ── -->
+  <vp-header (menuToggle)="toggleSidenav()"></vp-header>
+
+  <!-- ── Sidenav container ── -->
+  <mat-sidenav-container class="sidenav-container">
+
+    <mat-sidenav
+      #sidenav
+      [mode]="isMobile ? 'over' : 'side'"
+      [opened]="sidenavOpen"
+      class="app-sidenav"
+      [fixedInViewport]="false">
+      <vp-sidebar></vp-sidebar>
+    </mat-sidenav>
+
+    <mat-sidenav-content class="main-content">
+      <router-outlet></router-outlet>
+    </mat-sidenav-content>
+
+  </mat-sidenav-container>
+
+</div>

@@ -1,0 +1,151 @@
+<div class="page-container">
+
+  <!-- Header -->
+  <div class="page-header fade-in">
+    <div class="header-text">
+      <h1>{{ 'fund.title' | translate }}</h1>
+      <p class="subtitle">{{ totalElements }} {{ 'fund.title' | translate | lowercase }}</p>
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  <div *ngIf="!loading && !error && funds.length > 0" class="summary-row fade-in">
+    <div class="summary-card">
+      <mat-icon>account_balance</mat-icon>
+      <div>
+        <span class="summary-label">Total Allocated</span>
+        <span class="summary-value">{{ totalAllocated | inr }}</span>
+      </div>
+    </div>
+    <div class="summary-card received">
+      <mat-icon>moving</mat-icon>
+      <div>
+        <span class="summary-label">Total Received</span>
+        <span class="summary-value">{{ totalReceived | inr }}</span>
+      </div>
+    </div>
+    <div class="summary-card utilization">
+      <mat-icon>donut_large</mat-icon>
+      <div>
+        <span class="summary-label">Utilization</span>
+        <span class="summary-value">{{ utilizationPct }}%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-bar fade-in">
+    <mat-form-field appearance="outline" class="filter-search">
+      <mat-label>{{ 'common.search' | translate }}</mat-label>
+      <input matInput [(ngModel)]="searchTerm"
+             placeholder="Scheme name, reference, year…">
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="filter-select">
+      <mat-label>{{ 'fund.status' | translate }}</mat-label>
+      <mat-select [(ngModel)]="selectedStatus">
+        <mat-option value="">{{ 'common.all' | translate }}</mat-option>
+        <mat-option *ngFor="let s of statuses" [value]="s">
+          {{ 'fund.statuses.' + s | translate }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <button mat-stroked-button (click)="resetFilters()" class="reset-btn">
+      <mat-icon>refresh</mat-icon> {{ 'common.reset' | translate }}
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="state-container">
+    <mat-spinner diameter="48"></mat-spinner>
+    <p>{{ 'common.loading' | translate }}</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="!loading && error" class="state-container error-state">
+    <mat-icon>error_outline</mat-icon>
+    <p>{{ 'common.error' | translate }}</p>
+    <button mat-raised-button color="primary" (click)="load()">Retry</button>
+  </div>
+
+  <!-- Empty -->
+  <div *ngIf="!loading && !error && filteredFunds.length === 0" class="state-container">
+    <mat-icon>account_balance</mat-icon>
+    <p>{{ 'common.noData' | translate }}</p>
+  </div>
+
+  <!-- Fund cards -->
+  <div *ngIf="!loading && !error && filteredFunds.length > 0" class="funds-grid">
+    <div class="fund-card fade-in" *ngFor="let f of filteredFunds">
+
+      <!-- Card header -->
+      <div class="fund-card-header">
+        <div class="fund-title-row">
+          <h3 class="fund-name">{{ label(f.schemeNameEn, f.schemeNameHi) }}</h3>
+          <span class="status-chip" [ngClass]="'status-' + f.status.toLowerCase()">
+            {{ 'fund.statuses.' + f.status | translate }}
+          </span>
+        </div>
+        <div class="fund-meta">
+          <span class="source-chip">
+            <mat-icon>account_balance</mat-icon>
+            {{ 'fund.sources.' + f.fundSource | translate }}
+          </span>
+          <span class="year-chip">
+            <mat-icon>calendar_today</mat-icon>
+            {{ f.financialYear }}
+          </span>
+        </div>
+      </div>
+
+      <mat-divider></mat-divider>
+
+      <!-- Budget breakdown -->
+      <div class="fund-amounts">
+        <div class="amount-item">
+          <span class="amount-label">{{ 'fund.totalAmount' | translate }}</span>
+          <span class="amount-value total">{{ f.totalAmount | inr }}</span>
+        </div>
+        <div class="amount-item">
+          <span class="amount-label">{{ 'fund.received' | translate }}</span>
+          <span class="amount-value received">{{ f.amountReceived | inr }}</span>
+        </div>
+        <div class="amount-item">
+          <span class="amount-label">Utilization</span>
+          <span class="amount-value pct">{{ utilizationForFund(f) }}%</span>
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <vp-budget-bar [spent]="f.amountReceived" [allocated]="f.totalAmount">
+      </vp-budget-bar>
+
+      <!-- Footer meta -->
+      <div class="fund-footer">
+        <span *ngIf="f.referenceNumber" class="ref-number">
+          <mat-icon>tag</mat-icon>{{ f.referenceNumber }}
+        </span>
+        <span *ngIf="f.releaseDate" class="release-date">
+          <mat-icon>event</mat-icon>{{ f.releaseDate | date:'mediumDate' }}
+        </span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div *ngIf="totalPages > 1" class="pagination">
+    <button mat-icon-button [disabled]="page === 0" (click)="goToPage(page - 1)">
+      <mat-icon>chevron_left</mat-icon>
+    </button>
+    <button mat-button *ngFor="let p of pages"
+            [class.active-page]="p === page"
+            (click)="goToPage(p)">{{ p + 1 }}</button>
+    <button mat-icon-button [disabled]="page === totalPages - 1" (click)="goToPage(page + 1)">
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+  </div>
+
+</div>

@@ -1,0 +1,298 @@
+// ═══════════════════════════════════════════════════════════
+//  Village Portal — Global Styles
+//  Aesthetic: Earthy, institutional, trustworthy. Inspired
+//  by India's government green + terracotta warmth.
+//  Mobile-first. Low-bandwidth friendly (no heavy effects).
+// ═══════════════════════════════════════════════════════════
+
+// ── Google Fonts are loaded in index.html ──────────────────
+
+// ── Design tokens ──────────────────────────────────────────
+:root {
+  // Primary — deep government green
+  --color-primary:       #1a6b3a;
+  --color-primary-light: #2d8f52;
+  --color-primary-dark:  #0f4423;
+  --color-primary-50:    #e8f5ed;
+
+  // Accent — warm saffron/amber
+  --color-accent:        #e07b2a;
+  --color-accent-light:  #f09447;
+  --color-accent-dark:   #b85f18;
+
+  // Neutrals
+  --color-bg:            #f7f5f0;   // warm off-white, like handmade paper
+  --color-surface:       #ffffff;
+  --color-surface-alt:   #f0ede7;
+  --color-border:        #ddd8cf;
+  --color-text:          #1c1917;
+  --color-text-secondary:#5c5852;
+  --color-text-hint:     #9c9890;
+
+  // Semantic
+  --color-success:       #2e7d32;
+  --color-warning:       #f57c00;
+  --color-error:         #c62828;
+  --color-info:          #1565c0;
+
+  // Status colours (project status chips)
+  --status-planned:      #1565c0;
+  --status-ongoing:      #2e7d32;
+  --status-completed:    #4a148c;
+  --status-on-hold:      #e65100;
+  --status-cancelled:    #b71c1c;
+
+  // Typography
+  --font-display: 'Tiro Devanagari Hindi', serif;
+  --font-body:    'Noto Sans Devanagari', 'Noto Sans', sans-serif;
+
+  // Spacing scale
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  32px;
+  --space-2xl: 48px;
+
+  // Radius
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --radius-lg:  16px;
+  --radius-xl:  24px;
+
+  // Shadows (kept subtle for low-bandwidth — no blur-heavy effects)
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.10);
+  --shadow-md:  0 2px 8px rgba(0,0,0,0.12);
+  --shadow-lg:  0 4px 16px rgba(0,0,0,0.14);
+
+  // Layout
+  --sidebar-width:          260px;
+  --sidebar-collapsed-width: 64px;
+  --header-height:           64px;
+  --content-max-width:       1200px;
+}
+
+// ── Reset & base ───────────────────────────────────────────
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+// ── Typography ─────────────────────────────────────────────
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  line-height: 1.3;
+  color: var(--color-text);
+}
+
+h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 600; }
+h2 { font-size: clamp(1.3rem, 3vw, 1.7rem); font-weight: 600; }
+h3 { font-size: clamp(1.1rem, 2.5vw, 1.35rem); font-weight: 500; }
+h4 { font-size: 1.1rem; font-weight: 500; }
+
+p  { line-height: 1.7; color: var(--color-text-secondary); }
+a  { color: var(--color-primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+// ── Scrollbar ──────────────────────────────────────────────
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--color-surface-alt); }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-hint); }
+
+// ── Angular Material overrides ─────────────────────────────
+.mat-toolbar.mat-primary {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+}
+
+.mat-sidenav {
+  background: var(--color-primary-dark) !important;
+  color: #fff !important;
+  width: var(--sidebar-width);
+}
+
+.mat-card {
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-sm) !important;
+  border: 1px solid var(--color-border);
+}
+
+.mat-raised-button.mat-primary,
+.mat-flat-button.mat-primary {
+  background-color: var(--color-primary) !important;
+}
+
+.mat-raised-button.mat-accent,
+.mat-flat-button.mat-accent {
+  background-color: var(--color-accent) !important;
+}
+
+// ── Layout utilities ───────────────────────────────────────
+.page-container {
+  padding: var(--space-lg);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  @media (max-width: 600px) { padding: var(--space-md) var(--space-sm); }
+}
+
+.page-header {
+  margin-bottom: var(--space-xl);
+  padding-bottom: var(--space-md);
+  border-bottom: 2px solid var(--color-primary-50);
+
+  h1 { color: var(--color-primary-dark); }
+  p  { margin-top: var(--space-xs); font-size: 0.95rem; }
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
+  }
+}
+
+// ── Grid helpers ───────────────────────────────────────────
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+  @media (max-width: 480px) { grid-template-columns: repeat(2, 1fr); gap: var(--space-sm); }
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-lg);
+  @media (max-width: 960px) { grid-template-columns: 1fr; }
+}
+
+// ── Status chips ───────────────────────────────────────────
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+
+  &.PLANNED   { background: #e3f2fd; color: var(--status-planned); }
+  &.ONGOING   { background: #e8f5e9; color: var(--status-ongoing); }
+  &.COMPLETED { background: #f3e5f5; color: var(--status-completed); }
+  &.ON_HOLD   { background: #fff3e0; color: var(--status-on-hold); }
+  &.CANCELLED { background: #ffebee; color: var(--status-cancelled); }
+
+  &.ACTIVE  { background: #e8f5e9; color: var(--status-ongoing); }
+  &.PENDING { background: #fff8e1; color: var(--color-warning); }
+  &.CLOSED  { background: #f5f5f5; color: var(--color-text-hint); }
+}
+
+// ── INR currency display ───────────────────────────────────
+.amount {
+  font-weight: 600;
+  &::before { content: '₹'; margin-right: 2px; font-size: 0.85em; }
+}
+
+// ── Progress bar ───────────────────────────────────────────
+.progress-track {
+  height: 6px;
+  background: var(--color-border);
+  border-radius: 3px;
+  overflow: hidden;
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--color-primary);
+    transition: width 0.4s ease;
+
+    &.high   { background: var(--color-success); }
+    &.medium { background: var(--color-warning); }
+    &.low    { background: var(--color-error); }
+  }
+}
+
+// ── Table improvements ─────────────────────────────────────
+.mat-table {
+  width: 100%;
+  background: transparent !important;
+}
+
+.mat-header-cell {
+  font-weight: 700 !important;
+  font-size: 0.8rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary) !important;
+}
+
+.mat-row:hover { background: var(--color-primary-50) !important; }
+
+// ── Form styles ────────────────────────────────────────────
+.form-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  @media (max-width: 600px) { grid-template-columns: 1fr; }
+}
+
+.full-width { width: 100%; }
+
+// ── Snackbar ───────────────────────────────────────────────
+.snack-success .mat-simple-snack-bar-content { color: #e8f5e9; }
+.snack-error   .mat-simple-snack-bar-content { color: #ffebee; }
+
+// ── Fade-in animation ──────────────────────────────────────
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeInUp 0.3s ease forwards;
+}
+
+.fade-in-delay-1 { animation-delay: 0.05s; opacity: 0; }
+.fade-in-delay-2 { animation-delay: 0.10s; opacity: 0; }
+.fade-in-delay-3 { animation-delay: 0.15s; opacity: 0; }
+.fade-in-delay-4 { animation-delay: 0.20s; opacity: 0; }
+
+// ── Responsive helpers ─────────────────────────────────────
+.hide-mobile  { @media (max-width: 600px)  { display: none !important; } }
+.hide-tablet  { @media (max-width: 960px)  { display: none !important; } }
+.show-mobile  { @media (min-width: 601px)  { display: none !important; } }

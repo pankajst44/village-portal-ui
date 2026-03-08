@@ -1,0 +1,134 @@
+<div class="page-container">
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="state-container">
+    <mat-spinner diameter="48"></mat-spinner>
+    <p>{{ 'common.loading' | translate }}</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="!loading && error" class="state-container error-state">
+    <mat-icon>error_outline</mat-icon>
+    <p>{{ 'common.error' | translate }}</p>
+    <button mat-raised-button color="primary" (click)="goBack()">
+      {{ 'common.back' | translate }}
+    </button>
+  </div>
+
+  <!-- Content -->
+  <ng-container *ngIf="!loading && !error && project">
+
+    <!-- Back + header -->
+    <div class="page-header fade-in">
+      <button mat-icon-button (click)="goBack()" class="back-btn">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div class="header-text">
+        <div class="header-meta">
+          <span class="project-code">{{ project.projectCode }}</span>
+          <vp-status-badge [status]="project.status"
+            [label]="'project.statuses.' + project.status | translate">
+          </vp-status-badge>
+          <span class="type-chip">
+            {{ 'project.types.' + project.projectType | translate }}
+          </span>
+        </div>
+        <h1>{{ label(project.nameEn, project.nameHi) }}</h1>
+        <p class="location" *ngIf="project.locationEn">
+          <mat-icon>location_on</mat-icon>
+          {{ label(project.locationEn, project.locationHi) }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Progress banner -->
+    <div class="progress-banner fade-in">
+      <div class="progress-info">
+        <span class="progress-label">{{ 'project.progress' | translate }}</span>
+        <span class="progress-value">{{ project.progressPercent }}%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" [ngClass]="getProgressClass(project.progressPercent)"
+             [style.width.%]="project.progressPercent"></div>
+      </div>
+    </div>
+
+    <!-- Details grid -->
+    <div class="details-grid fade-in">
+
+      <!-- Budget card -->
+      <mat-card class="detail-card budget-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>account_balance_wallet</mat-icon>
+          <mat-card-title>Budget Overview</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="budget-row">
+            <div class="budget-item">
+              <span class="budget-item-label">{{ 'project.budget' | translate }}</span>
+              <span class="budget-item-value allocated">{{ project.allocatedBudget | inr }}</span>
+            </div>
+            <div class="budget-item">
+              <span class="budget-item-label">{{ 'project.spent' | translate }}</span>
+              <span class="budget-item-value spent">{{ project.totalSpent | inr }}</span>
+            </div>
+            <div class="budget-item">
+              <span class="budget-item-label">{{ 'project.remaining' | translate }}</span>
+              <span class="budget-item-value remaining">{{ project.remainingBudget | inr }}</span>
+            </div>
+          </div>
+          <vp-budget-bar [spent]="project.totalSpent" [allocated]="project.allocatedBudget">
+          </vp-budget-bar>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Info card -->
+      <mat-card class="detail-card info-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>info</mat-icon>
+          <mat-card-title>{{ 'project.description' | translate }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p class="description" *ngIf="project.descriptionEn || project.descriptionHi; else noDesc">
+            {{ label(project.descriptionEn, project.descriptionHi) }}
+          </p>
+          <ng-template #noDesc>
+            <p class="no-data">{{ 'common.noData' | translate }}</p>
+          </ng-template>
+
+          <mat-divider class="divider"></mat-divider>
+
+          <div class="info-grid">
+            <div class="info-item" *ngIf="project.fundSchemeNameEn">
+              <span class="info-label">{{ 'project.fund' | translate }}</span>
+              <span class="info-value">{{ label(project.fundSchemeNameEn, project.fundSchemeNameHi) }}</span>
+            </div>
+            <div class="info-item" *ngIf="project.assignedOfficerName">
+              <span class="info-label">{{ 'project.officer' | translate }}</span>
+              <span class="info-value">{{ project.assignedOfficerName }}</span>
+            </div>
+            <div class="info-item" *ngIf="project.startDate">
+              <span class="info-label">{{ 'project.startDate' | translate }}</span>
+              <span class="info-value">{{ project.startDate | date:'mediumDate' }}</span>
+            </div>
+            <div class="info-item" *ngIf="project.expectedEndDate">
+              <span class="info-label">{{ 'project.endDate' | translate }}</span>
+              <span class="info-value">{{ project.expectedEndDate | date:'mediumDate' }}</span>
+            </div>
+            <div class="info-item" *ngIf="project.actualEndDate">
+              <span class="info-label">{{ 'project.actualEndDate' | translate }}</span>
+              <span class="info-value">{{ project.actualEndDate | date:'mediumDate' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">{{ 'common.updatedAt' | translate }}</span>
+              <span class="info-value">{{ project.updatedAt | date:'mediumDate' }}</span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+
+  </ng-container>
+
+</div>

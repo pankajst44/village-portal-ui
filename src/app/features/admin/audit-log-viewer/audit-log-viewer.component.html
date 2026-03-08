@@ -1,0 +1,277 @@
+<div class="page-container">
+
+  <!-- Header -->
+  <div class="page-header fade-in">
+    <div class="header-text">
+      <h1>{{ 'audit.title' | translate }}</h1>
+      <p class="subtitle">Search audit logs using the filters below</p>
+    </div>
+  </div>
+
+  <!-- Filter panel -->
+  <div class="filter-panel fade-in">
+
+    <!-- Mode tabs -->
+    <div class="mode-tabs">
+      <button class="mode-tab" [class.active]="filterMode === 'action'"
+              (click)="filterMode = 'action'; reset()">
+        <mat-icon>filter_list</mat-icon> By Action
+      </button>
+      <button class="mode-tab" [class.active]="filterMode === 'dateRange'"
+              (click)="filterMode = 'dateRange'; reset()">
+        <mat-icon>date_range</mat-icon> By Date Range
+      </button>
+      <button class="mode-tab" [class.active]="filterMode === 'record'"
+              (click)="filterMode = 'record'; reset()">
+        <mat-icon>manage_search</mat-icon> Record History
+      </button>
+    </div>
+
+    <!-- Action filter -->
+    <div class="filter-row" *ngIf="filterMode === 'action'">
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>{{ 'audit.action' | translate }}</mat-label>
+        <mat-select [(ngModel)]="selectedAction">
+          <mat-option *ngFor="let a of actions" [value]="a">
+            <div class="action-option">
+              <mat-icon [style.color]="getActionColor(a)">{{ getActionIcon(a) }}</mat-icon>
+              {{ a }}
+            </div>
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <!-- Date range filter -->
+    <div class="filter-row" *ngIf="filterMode === 'dateRange'">
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>From</mat-label>
+        <input matInput type="date" [(ngModel)]="dateFrom">
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>To</mat-label>
+        <input matInput type="date" [(ngModel)]="dateTo">
+      </mat-form-field>
+    </div>
+
+    <!-- Record history filter -->
+    <div class="filter-row" *ngIf="filterMode === 'record'">
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>{{ 'audit.table' | translate }}</mat-label>
+        <mat-select [(ngModel)]="tableName">
+          <mat-option *ngFor="let t of tableNames" [value]="t">{{ t }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="filter-field narrow">
+        <mat-label>{{ 'audit.record' | translate }}</mat-label>
+        <input matInput type="number" [(ngModel)]="recordId" placeholder="e.g. 42">
+      </mat-form-field>
+    </div>
+
+    <!-- Search bar + actions -->
+    <div class="filter-actions">
+      <mat-form-field appearance="outline" class="search-field" *ngIf="hasSearched && logs.length > 0">
+        <mat-label>{{ 'common.search' | translate }}</mat-label>
+        <input matInput [(ngModel)]="searchTerm" placeholder="Table, user, summary, IP…">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+      <div class="action-buttons">
+        <button mat-raised-button color="primary"
+                [disabled]="!canSearch || loading"
+                (click)="search()">
+          <mat-icon>search</mat-icon> Search
+        </button>
+        <button mat-stroked-button (click)="reset()" *ngIf="hasSearched">
+          <mat-icon>clear</mat-icon> Reset
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prompt before first search -->
+  <div *ngIf="!hasSearched" class="state-container prompt">
+    <mat-icon>manage_search</mat-icon>
+    <p>Select a filter above and press Search to load audit logs.</p>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="state-container">
+    <mat-spinner diameter="48"></mat-spinner>
+    <p>{{ 'common.loading' | translate }}</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="!loading && error" class="state-container error-state">
+    <mat-icon>error_outline</mat-icon>
+    <p>{{ 'common.error' | translate }}</p>
+    <button mat-raised-button color="primary" (click)="search()">Retry</button>
+  </div>
+
+  <!-- Empty -->
+  <div *ngIf="!loading && !error && hasSearched && filtered.length === 0" class="state-container">
+    <mat-icon>history_toggle_off</mat-icon>
+    <p>No audit logs found for this filter.</p>
+  </div>
+
+  <!-- Main layout: table + detail drawer -->
+  <div *ngIf="!loading && !error && filtered.length > 0"
+       class="main-layout fade-in" [class.has-detail]="selectedLog">
+
+    <!-- Log table -->
+    <div class="table-wrapper">
+      <div class="table-meta">
+        <span>{{ totalElements }} entries found</span>
+      </div>
+      <table mat-table [dataSource]="filtered" class="audit-table">
+
+        <ng-container matColumnDef="action">
+          <th mat-header-cell *matHeaderCellDef>{{ 'audit.action' | translate }}</th>
+          <td mat-cell *matCellDef="let l">
+            <span class="action-chip"
+                  [style.background]="getActionColor(l.action) + '18'"
+                  [style.color]="getActionColor(l.action)">
+              <mat-icon>{{ getActionIcon(l.action) }}</mat-icon>
+              {{ l.action }}
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="table">
+          <th mat-header-cell *matHeaderCellDef>{{ 'audit.table' | translate }}</th>
+          <td mat-cell *matCellDef="let l">
+            <span class="table-name">{{ l.tableName }}</span>
+            <span class="record-id" *ngIf="l.recordId"> #{{ l.recordId }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="user">
+          <th mat-header-cell *matHeaderCellDef>{{ 'audit.changedBy' | translate }}</th>
+          <td mat-cell *matCellDef="let l">
+            <div class="user-cell" *ngIf="l.changedByUsername">
+              <mat-icon>person</mat-icon>
+              <div>
+                <span class="username">{{ l.changedByUsername }}</span>
+                <span class="role" *ngIf="l.changedByRole">{{ l.changedByRole }}</span>
+              </div>
+            </div>
+            <span *ngIf="!l.changedByUsername" class="muted">—</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="summary">
+          <th mat-header-cell *matHeaderCellDef>{{ 'audit.summary' | translate }}</th>
+          <td mat-cell *matCellDef="let l">
+            <span class="summary-text">{{ l.changeSummary || '—' }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="ip">
+          <th mat-header-cell *matHeaderCellDef>{{ 'audit.ip' | translate }}</th>
+          <td mat-cell *matCellDef="let l">
+            <span class="ip-address">{{ l.ipAddress || '—' }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="time">
+          <th mat-header-cell *matHeaderCellDef>{{ 'audit.timestamp' | translate }}</th>
+          <td mat-cell *matCellDef="let l">
+            <div class="time-cell">
+              <span class="date">{{ l.createdAt | date:'mediumDate' }}</span>
+              <span class="time">{{ l.createdAt | date:'shortTime' }}</span>
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="detail">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let l">
+            <button mat-icon-button *ngIf="l.oldValues || l.newValues"
+                    [class.active-detail]="selectedLog?.id === l.id"
+                    (click)="$event.stopPropagation(); openDetail(l)"
+                    matTooltip="View changes">
+              <mat-icon>{{ selectedLog?.id === l.id ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="['action','table','user','summary','ip','time','detail']"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['action','table','user','summary','ip','time','detail']"
+            class="table-row"
+            [class.selected-row]="selectedLog?.id === row.id"
+            (click)="openDetail(row)"></tr>
+      </table>
+    </div>
+
+    <!-- Detail drawer -->
+    <div class="detail-drawer" *ngIf="selectedLog">
+      <div class="drawer-header">
+        <div class="drawer-title">
+          <span class="action-chip"
+                [style.background]="getActionColor(selectedLog.action) + '18'"
+                [style.color]="getActionColor(selectedLog.action)">
+            <mat-icon>{{ getActionIcon(selectedLog.action) }}</mat-icon>
+            {{ selectedLog.action }}
+          </span>
+          <span class="drawer-table">
+            {{ selectedLog.tableName }}<span *ngIf="selectedLog.recordId"> #{{ selectedLog.recordId }}</span>
+          </span>
+        </div>
+        <button mat-icon-button (click)="closeDetail()"><mat-icon>close</mat-icon></button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="detail-row">
+          <span class="detail-label">{{ 'audit.timestamp' | translate }}</span>
+          <span class="detail-value">{{ selectedLog.createdAt | date:'medium' }}</span>
+        </div>
+        <div class="detail-row" *ngIf="selectedLog.changedByUsername">
+          <span class="detail-label">{{ 'audit.changedBy' | translate }}</span>
+          <span class="detail-value">
+            {{ selectedLog.changedByUsername }}
+            <span class="role-tag" *ngIf="selectedLog.changedByRole">{{ selectedLog.changedByRole }}</span>
+          </span>
+        </div>
+        <div class="detail-row" *ngIf="selectedLog.ipAddress">
+          <span class="detail-label">{{ 'audit.ip' | translate }}</span>
+          <span class="detail-value mono">{{ selectedLog.ipAddress }}</span>
+        </div>
+        <div class="detail-row" *ngIf="selectedLog.changeSummary">
+          <span class="detail-label">{{ 'audit.summary' | translate }}</span>
+          <span class="detail-value">{{ selectedLog.changeSummary }}</span>
+        </div>
+
+        <div class="json-block old-values" *ngIf="selectedLog.oldValues">
+          <div class="json-label"><mat-icon>undo</mat-icon> {{ 'audit.oldValues' | translate }}</div>
+          <pre class="json-content">{{ formatJson(selectedLog.oldValues) }}</pre>
+        </div>
+
+        <div class="json-block new-values" *ngIf="selectedLog.newValues">
+          <div class="json-label"><mat-icon>redo</mat-icon> {{ 'audit.newValues' | translate }}</div>
+          <pre class="json-content">{{ formatJson(selectedLog.newValues) }}</pre>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main-layout -->
+
+  <!-- Pagination -->
+  <div *ngIf="!loading && totalPages > 1" class="pagination fade-in">
+    <button mat-icon-button [disabled]="page === 0" (click)="goToPage(0)">
+      <mat-icon>first_page</mat-icon>
+    </button>
+    <button mat-icon-button [disabled]="page === 0" (click)="goToPage(page - 1)">
+      <mat-icon>chevron_left</mat-icon>
+    </button>
+    <button mat-button *ngFor="let p of pages"
+            [class.active-page]="p === page"
+            (click)="goToPage(p)">{{ p + 1 }}</button>
+    <button mat-icon-button [disabled]="page === totalPages - 1" (click)="goToPage(page + 1)">
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+    <button mat-icon-button [disabled]="page === totalPages - 1" (click)="goToPage(totalPages - 1)">
+      <mat-icon>last_page</mat-icon>
+    </button>
+    <span class="page-info">Page {{ page + 1 }} of {{ totalPages }} · {{ totalElements }} entries</span>
+  </div>
+
+</div>

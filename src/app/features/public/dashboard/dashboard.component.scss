@@ -1,0 +1,333 @@
+// ── Page header ────────────────────────────────────────────
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--space-xl);
+
+  h1 {
+    color: var(--color-primary-dark);
+    margin-bottom: var(--space-xs);
+  }
+  p { font-size: 0.9rem; margin: 0; }
+}
+
+.financial-year-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-primary-50);
+  color: var(--color-primary);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+
+// ── Skeleton loader ────────────────────────────────────────
+.skeleton-card {
+  height: 100px;
+  background: linear-gradient(90deg, #ede9e0 25%, #f5f2ec 50%, #ede9e0 75%);
+  background-size: 200% 100%;
+  border-radius: var(--radius-md);
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+// ── Budget overview card ───────────────────────────────────
+.budget-overview-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  margin-bottom: var(--space-xl);
+
+  @media (max-width: 600px) { padding: var(--space-md); }
+}
+
+.budget-overview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+
+  .section-title { margin-bottom: 0; }
+  .section-title::after { display: none; }
+
+  .budget-amounts {
+    font-size: 0.9rem;
+    strong { color: var(--color-text); }
+    span   { color: var(--color-text-secondary); }
+  }
+}
+
+// ── Projects panel ─────────────────────────────────────────
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+
+  .section-title { margin-bottom: 0; flex: 1; }
+}
+
+.view-all-btn {
+  font-size: 0.82rem !important;
+  color: var(--color-primary) !important;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 var(--space-sm) !important;
+  min-width: auto !important;
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.project-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  cursor: pointer;
+  transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+
+  &:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 600px) { padding: var(--space-sm) var(--space-md); }
+}
+
+.project-card-top {
+  margin-bottom: var(--space-sm);
+}
+
+.project-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-xs);
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.project-code {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-text-hint);
+  text-transform: uppercase;
+}
+
+.project-name {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-text);
+  line-height: 1.4;
+  margin: var(--space-xs) 0;
+}
+
+.project-location {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+
+  mat-icon { font-size: 13px; width: 13px; height: 13px; }
+}
+
+.project-card-bottom {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.project-budget {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 0.8rem;
+  margin-bottom: 6px;
+
+  .budget-label { color: var(--color-text-secondary); }
+  .budget-value { font-weight: 700; color: var(--color-text); }
+  .budget-of    { color: var(--color-text-hint); }
+}
+
+.project-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+
+  .progress-track {
+    flex: 1;
+    height: 5px;
+    background: var(--color-border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--color-primary);
+    transition: width 0.4s ease;
+
+    &.high   { background: var(--color-success); }
+    &.medium { background: var(--color-warning); }
+    &.low    { background: var(--color-error); }
+  }
+
+  .progress-pct {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    min-width: 30px;
+    text-align: right;
+  }
+}
+
+// ── Side panels ────────────────────────────────────────────
+.funds-panel,
+.status-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  margin-bottom: var(--space-lg);
+
+  @media (max-width: 600px) { padding: var(--space-md); }
+}
+
+.fund-item {
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--color-border);
+
+  &:last-child { border-bottom: none; }
+}
+
+.fund-item-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.fund-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.3;
+}
+
+.fund-source-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--color-primary-50);
+  color: var(--color-primary);
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fund-amounts {
+  margin-bottom: var(--space-sm);
+}
+
+.fund-amount-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  margin-bottom: 2px;
+  color: var(--color-text-secondary);
+
+  strong { color: var(--color-text); font-weight: 600; }
+}
+
+// ── Status breakdown ───────────────────────────────────────
+.status-breakdown {
+  margin-top: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.status-row-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 100px;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-row-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.status-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.status-row-count {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text);
+  min-width: 20px;
+  text-align: right;
+}
+
+// ── Empty state ────────────────────────────────────────────
+.empty-state {
+  padding: var(--space-xl) 0;
+  text-align: center;
+
+  mat-icon {
+    font-size: 36px; width: 36px; height: 36px;
+    color: var(--color-text-hint);
+    display: block; margin: 0 auto var(--space-sm);
+  }
+  p { font-size: 0.85rem; color: var(--color-text-hint); margin: 0; }
+}

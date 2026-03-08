@@ -1,0 +1,217 @@
+<div class="page-container">
+
+  <!-- Header -->
+  <div class="page-header fade-in">
+    <h1>{{ 'document.title' | translate }}</h1>
+    <p class="subtitle">Public project documents and records</p>
+  </div>
+
+  <!-- ── STEP 1: Project selector ── -->
+  <ng-container *ngIf="!selectedProject">
+    <div *ngIf="projectsLoading" class="state-container">
+      <mat-spinner diameter="48"></mat-spinner>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+
+    <div *ngIf="!projectsLoading && projects.length === 0" class="state-container">
+      <mat-icon>folder_open</mat-icon>
+      <p>{{ 'project.noProjects' | translate }}</p>
+    </div>
+
+    <div *ngIf="!projectsLoading && projects.length > 0">
+      <p class="select-hint">Select a project to browse its documents:</p>
+      <div class="project-selector-grid">
+        <div class="project-select-card fade-in" *ngFor="let p of projects" (click)="selectProject(p)">
+          <div class="card-meta">
+            <span class="project-code">{{ p.projectCode }}</span>
+            <vp-status-badge [status]="p.status" [label]="'project.statuses.' + p.status | translate"></vp-status-badge>
+          </div>
+          <h4 class="project-name">{{ label(p.nameEn, p.nameHi) }}</h4>
+          <p class="project-location" *ngIf="p.locationEn">
+            <mat-icon>location_on</mat-icon>{{ label(p.locationEn, p.locationHi) }}
+          </p>
+          <div class="card-footer">
+            <mat-icon>folder_open</mat-icon>
+            <span>View documents</span>
+            <mat-icon class="arrow">chevron_right</mat-icon>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ── STEP 2: Documents view ── -->
+  <ng-container *ngIf="selectedProject">
+
+    <!-- Banner -->
+    <div class="selected-project-banner fade-in">
+      <button mat-icon-button (click)="clearProject()"><mat-icon>arrow_back</mat-icon></button>
+      <div class="banner-info">
+        <span class="banner-code">{{ selectedProject.projectCode }}</span>
+        <h3 class="banner-name">{{ label(selectedProject.nameEn, selectedProject.nameHi) }}</h3>
+      </div>
+      <div class="banner-stats" *ngIf="!loading && documents.length > 0">
+        <span class="banner-stat"><mat-icon>folder</mat-icon> {{ totalCount }} docs</span>
+        <span class="banner-stat public"><mat-icon>public</mat-icon> {{ publicCount }} public</span>
+      </div>
+    </div>
+
+    <!-- Loading / Error / Empty -->
+    <div *ngIf="loading" class="state-container">
+      <mat-spinner diameter="48"></mat-spinner><p>{{ 'common.loading' | translate }}</p>
+    </div>
+    <div *ngIf="!loading && error" class="state-container error-state">
+      <mat-icon>error_outline</mat-icon><p>{{ 'common.error' | translate }}</p>
+      <button mat-raised-button color="primary" (click)="loadDocuments()">Retry</button>
+    </div>
+    <div *ngIf="!loading && !error && documents.length === 0" class="state-container">
+      <mat-icon>folder_open</mat-icon><p>No documents uploaded for this project yet.</p>
+    </div>
+
+    <ng-container *ngIf="!loading && !error && documents.length > 0">
+
+      <!-- Type breakdown chips -->
+      <div class="type-breakdown fade-in">
+        <div class="type-chip-count" *ngFor="let t of docTypes"
+             [style.display]="getTypeCount(t) > 0 ? 'flex' : 'none'"
+             [class.active]="selectedType === t"
+             (click)="selectedType = selectedType === t ? '' : t">
+          <mat-icon [style.color]="getDocColor(t)">{{ getDocIcon(t) }}</mat-icon>
+          <span>{{ 'document.types.' + t | translate }}</span>
+          <span class="count-badge">{{ getTypeCount(t) }}</span>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="filters-bar fade-in">
+        <mat-form-field appearance="outline" class="filter-search">
+          <mat-label>{{ 'common.search' | translate }}</mat-label>
+          <input matInput [(ngModel)]="searchTerm" placeholder="Title, filename, uploaded by…">
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="filter-select">
+          <mat-label>{{ 'document.type' | translate }}</mat-label>
+          <mat-select [(ngModel)]="selectedType">
+            <mat-option value="">{{ 'common.all' | translate }}</mat-option>
+            <mat-option *ngFor="let t of docTypes" [value]="t">{{ 'document.types.' + t | translate }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div *ngIf="filteredDocuments.length === 0" class="state-container">
+        <mat-icon>search_off</mat-icon><p>No documents match your filter.</p>
+      </div>
+
+      <!-- Two-column layout: list + preview -->
+      <div *ngIf="filteredDocuments.length > 0" class="docs-layout" [class.has-preview]="previewDoc">
+
+        <!-- Document cards -->
+        <div class="docs-grid">
+          <div class="doc-card fade-in" *ngFor="let d of filteredDocuments"
+               [class.selected]="previewDoc?.id === d.id">
+
+            <div class="doc-card-top">
+              <div class="doc-icon-wrap" [style.background]="getDocColor(d.documentType) + '18'">
+                <mat-icon [style.color]="getDocColor(d.documentType)">{{ getDocIcon(d.documentType) }}</mat-icon>
+              </div>
+              <div class="doc-info">
+                <h4 class="doc-title">{{ label(d.titleEn, d.titleHi) || d.originalFileName }}</h4>
+                <span class="doc-type-chip"
+                      [style.background]="getDocColor(d.documentType) + '18'"
+                      [style.color]="getDocColor(d.documentType)">
+                  {{ 'document.types.' + d.documentType | translate }}
+                </span>
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <div class="doc-meta">
+              <div class="meta-item">
+                <mat-icon>insert_drive_file</mat-icon>
+                <span class="file-name" [title]="d.originalFileName">{{ d.originalFileName }}</span>
+              </div>
+              <div class="meta-row">
+                <div class="meta-item" *ngIf="d.fileSizeKb">
+                  <mat-icon>data_usage</mat-icon><span>{{ formatSize(d.fileSizeKb) }}</span>
+                </div>
+                <div class="meta-item" *ngIf="d.uploadedByUsername">
+                  <mat-icon>person</mat-icon><span>{{ d.uploadedByUsername }}</span>
+                </div>
+                <div class="meta-item">
+                  <mat-icon>schedule</mat-icon><span>{{ d.uploadedAt | date:'mediumDate' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="doc-actions">
+              <button mat-stroked-button class="preview-btn"
+                      *ngIf="canPreview(d)"
+                      (click)="openPreview(d)">
+                <mat-icon>visibility</mat-icon> Preview
+              </button>
+              <button mat-stroked-button class="download-btn"
+                      [style.color]="getDocColor(d.documentType)"
+                      [style.border-color]="getDocColor(d.documentType)"
+                      (click)="download(d)">
+                <mat-icon>download</mat-icon> {{ 'document.download' | translate }}
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Preview panel -->
+        <div class="preview-panel" *ngIf="previewDoc">
+          <div class="preview-header">
+            <div class="preview-title">
+              <mat-icon [style.color]="getDocColor(previewDoc.documentType)">
+                {{ getDocIcon(previewDoc.documentType) }}
+              </mat-icon>
+              <span>{{ label(previewDoc.titleEn, previewDoc.titleHi) || previewDoc.originalFileName }}</span>
+            </div>
+            <div class="preview-header-actions">
+              <button mat-icon-button (click)="download(previewDoc)" matTooltip="Download">
+                <mat-icon>download</mat-icon>
+              </button>
+              <button mat-icon-button (click)="closePreview()" matTooltip="Close">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          </div>
+
+          <!-- Loading -->
+          <div *ngIf="previewLoading" class="preview-state">
+            <mat-spinner diameter="40"></mat-spinner>
+            <p>Loading preview…</p>
+          </div>
+
+          <!-- Error -->
+          <div *ngIf="!previewLoading && previewError" class="preview-state error-state">
+            <mat-icon>broken_image</mat-icon>
+            <p>Preview unavailable</p>
+            <button mat-stroked-button (click)="download(previewDoc)">
+              <mat-icon>download</mat-icon> Download instead
+            </button>
+          </div>
+
+          <!-- Image preview -->
+          <div *ngIf="!previewLoading && !previewError && previewIsImage && safeImageUrl"
+               class="preview-image-wrap">
+            <img [src]="safeImageUrl" [alt]="previewDoc.originalFileName" class="preview-image">
+          </div>
+
+          <!-- PDF preview -->
+          <div *ngIf="!previewLoading && !previewError && previewIsPdf && previewUrl"
+               class="preview-pdf-wrap">
+            <iframe [src]="previewUrl" class="preview-pdf" frameborder="0"></iframe>
+          </div>
+
+        </div>
+      </div>
+
+    </ng-container>
+  </ng-container>
+
+</div>

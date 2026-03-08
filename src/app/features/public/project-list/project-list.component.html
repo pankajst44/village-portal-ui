@@ -1,0 +1,117 @@
+<div class="page-container">
+
+  <!-- Header -->
+  <div class="page-header fade-in">
+    <div class="header-text">
+      <h1>{{ 'project.title' | translate }}</h1>
+      <p class="subtitle">{{ totalElements }} {{ 'project.title' | translate | lowercase }}</p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-bar fade-in">
+    <mat-form-field appearance="outline" class="filter-search">
+      <mat-label>{{ 'common.search' | translate }}</mat-label>
+      <input matInput [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()"
+             placeholder="Name, code, location…">
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="filter-select">
+      <mat-label>{{ 'project.status' | translate }}</mat-label>
+      <mat-select [(ngModel)]="selectedStatus" (ngModelChange)="applyFilters()">
+        <mat-option value="">{{ 'common.all' | translate }}</mat-option>
+        <mat-option *ngFor="let s of statuses" [value]="s">
+          {{ 'project.statuses.' + s | translate }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="filter-select">
+      <mat-label>{{ 'project.type' | translate }}</mat-label>
+      <mat-select [(ngModel)]="selectedType" (ngModelChange)="applyFilters()">
+        <mat-option value="">{{ 'common.all' | translate }}</mat-option>
+        <mat-option *ngFor="let t of types" [value]="t">
+          {{ 'project.types.' + t | translate }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <button mat-stroked-button (click)="resetFilters()" class="reset-btn">
+      <mat-icon>refresh</mat-icon> {{ 'common.reset' | translate }}
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="state-container">
+    <mat-spinner diameter="48"></mat-spinner>
+    <p>{{ 'common.loading' | translate }}</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="!loading && error" class="state-container error-state">
+    <mat-icon>error_outline</mat-icon>
+    <p>{{ 'common.error' | translate }}</p>
+    <button mat-raised-button color="primary" (click)="load()">Retry</button>
+  </div>
+
+  <!-- Empty -->
+  <div *ngIf="!loading && !error && filteredProjects.length === 0" class="state-container">
+    <mat-icon>folder_open</mat-icon>
+    <p>{{ 'project.noProjects' | translate }}</p>
+  </div>
+
+  <!-- Project grid -->
+  <div *ngIf="!loading && !error && filteredProjects.length > 0" class="projects-grid">
+    <div class="project-card fade-in" *ngFor="let p of filteredProjects"
+         (click)="openDetail(p.id)">
+
+      <div class="card-top">
+        <div class="card-meta">
+          <span class="project-code">{{ p.projectCode }}</span>
+          <vp-status-badge [status]="p.status"
+            [label]="'project.statuses.' + p.status | translate">
+          </vp-status-badge>
+        </div>
+        <h3 class="project-name">{{ label(p.nameEn, p.nameHi) }}</h3>
+        <p class="project-type">
+          <mat-icon>category</mat-icon>
+          {{ 'project.types.' + p.projectType | translate }}
+        </p>
+        <p class="project-location" *ngIf="p.locationEn">
+          <mat-icon>location_on</mat-icon>
+          {{ label(p.locationEn, p.locationHi) }}
+        </p>
+      </div>
+
+      <div class="card-bottom">
+        <div class="budget-row">
+          <span class="budget-label">{{ 'project.spent' | translate }}</span>
+          <span class="budget-spent">{{ p.totalSpent | inr }}</span>
+          <span class="budget-total"> / {{ p.allocatedBudget | inr }}</span>
+        </div>
+        <div class="progress-row">
+          <div class="progress-track">
+            <div class="progress-fill" [ngClass]="getProgressClass(p.progressPercent)"
+                 [style.width.%]="p.progressPercent"></div>
+          </div>
+          <span class="progress-pct">{{ p.progressPercent }}%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div *ngIf="totalPages > 1" class="pagination">
+    <button mat-icon-button [disabled]="page === 0" (click)="goToPage(page - 1)">
+      <mat-icon>chevron_left</mat-icon>
+    </button>
+    <button mat-button *ngFor="let p of pages"
+            [class.active-page]="p === page"
+            (click)="goToPage(p)">{{ p + 1 }}</button>
+    <button mat-icon-button [disabled]="page === totalPages - 1" (click)="goToPage(page + 1)">
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+  </div>
+
+</div>

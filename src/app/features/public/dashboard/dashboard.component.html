@@ -1,0 +1,202 @@
+<div class="page-container">
+
+  <!-- ── Page Header ───────────────────────────────────── -->
+  <div class="page-header fade-in">
+    <div class="header-text">
+      <h1>{{ 'dashboard.title' | translate }}</h1>
+      <p>{{ 'dashboard.subtitle' | translate }}</p>
+    </div>
+    <div class="header-meta hide-mobile">
+      <span class="financial-year-badge">
+        <mat-icon>calendar_today</mat-icon>
+        2024–25
+      </span>
+    </div>
+  </div>
+
+  <!-- ── Loading skeleton ─────────────────────────────── -->
+  <ng-container *ngIf="loading">
+    <div class="stats-grid">
+      <div class="skeleton-card" *ngFor="let i of [1,2,3,4]"></div>
+    </div>
+  </ng-container>
+
+  <!-- ── Stats Grid ────────────────────────────────────── -->
+  <ng-container *ngIf="!loading">
+
+    <div class="stats-grid">
+
+      <vp-stat-card
+        class="fade-in fade-in-delay-1"
+        icon="account_balance"
+        [value]="stats.totalFundsReceived | inr"
+        [label]="'dashboard.totalFunds' | translate"
+        accent="green">
+      </vp-stat-card>
+
+      <vp-stat-card
+        class="fade-in fade-in-delay-2"
+        icon="construction"
+        [value]="stats.totalProjects.toString()"
+        [label]="'dashboard.totalProjects' | translate"
+        [sub]="(stats.ongoingProjects + ' ongoing') "
+        accent="blue">
+      </vp-stat-card>
+
+      <vp-stat-card
+        class="fade-in fade-in-delay-3"
+        icon="payments"
+        [value]="stats.totalSpent | inr"
+        [label]="'dashboard.totalSpent' | translate"
+        [sub]="(stats.budgetUtilizationPct | number:'1.0-1') + '% utilized'"
+        accent="orange">
+      </vp-stat-card>
+
+      <vp-stat-card
+        class="fade-in fade-in-delay-4"
+        icon="task_alt"
+        [value]="stats.completedProjects.toString()"
+        [label]="'dashboard.completedProjects' | translate"
+        accent="green">
+      </vp-stat-card>
+
+    </div>
+
+    <!-- ── Budget utilisation bar ─────────────────────── -->
+    <div class="budget-overview-card fade-in">
+      <div class="budget-overview-header">
+        <span class="section-title">{{ 'dashboard.budgetUtilization' | translate }}</span>
+        <span class="budget-amounts">
+          <strong>{{ stats.totalSpent | inr }}</strong>
+          <span> / {{ stats.totalAllocatedBudget | inr }}</span>
+        </span>
+      </div>
+      <vp-budget-bar [spent]="stats.totalSpent" [allocated]="stats.totalAllocatedBudget">
+      </vp-budget-bar>
+    </div>
+
+    <!-- ── Main content grid ──────────────────────────── -->
+    <div class="content-grid">
+
+      <!-- LEFT: Recent Projects ──────────────────────── -->
+      <div class="projects-panel fade-in">
+
+        <div class="panel-header">
+          <span class="section-title">{{ 'dashboard.recentProjects' | translate }}</span>
+          <a mat-button color="primary" routerLink="/projects" class="view-all-btn">
+            {{ 'dashboard.viewAll' | translate }}
+            <mat-icon>chevron_right</mat-icon>
+          </a>
+        </div>
+
+        <!-- Project cards -->
+        <div class="project-list">
+          <div class="project-card" *ngFor="let project of recentProjects"
+               [routerLink]="['/projects', project.id]">
+
+            <div class="project-card-top">
+              <div class="project-card-meta">
+                <span class="project-code">{{ project.projectCode }}</span>
+                <vp-status-badge
+                  [status]="project.status"
+                  [label]="'project.statuses.' + project.status | translate">
+                </vp-status-badge>
+              </div>
+              <h4 class="project-name">{{ label(project.nameEn, project.nameHi) }}</h4>
+              <p class="project-location" *ngIf="project.locationEn">
+                <mat-icon>location_on</mat-icon>
+                {{ label(project.locationEn, project.locationHi) }}
+              </p>
+            </div>
+
+            <div class="project-card-bottom">
+              <div class="project-budget">
+                <span class="budget-label">{{ 'project.spent' | translate }}</span>
+                <span class="budget-value">{{ project.totalSpent | inr }}</span>
+                <span class="budget-of">/ {{ project.allocatedBudget | inr }}</span>
+              </div>
+              <div class="project-progress">
+                <div class="progress-track">
+                  <div class="progress-fill"
+                       [class]="getProgressClass(project.progressPercent)"
+                       [style.width.%]="project.progressPercent">
+                  </div>
+                </div>
+                <span class="progress-pct">{{ project.progressPercent }}%</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Empty state -->
+          <div class="empty-state" *ngIf="recentProjects.length === 0">
+            <mat-icon>folder_open</mat-icon>
+            <p>{{ 'project.noProjects' | translate }}</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: Funds + Status breakdown ────────────── -->
+      <div class="side-panels">
+
+        <!-- Active Funds -->
+        <div class="funds-panel fade-in">
+          <div class="panel-header">
+            <span class="section-title">{{ 'dashboard.fundsSummary' | translate }}</span>
+          </div>
+
+          <div class="fund-item" *ngFor="let fund of activeFunds">
+            <div class="fund-item-header">
+              <span class="fund-name">{{ label(fund.schemeNameEn, fund.schemeNameHi) }}</span>
+              <span class="fund-source-badge">
+                {{ 'fund.sources.' + fund.fundSource | translate }}
+              </span>
+            </div>
+            <div class="fund-amounts">
+              <div class="fund-amount-row">
+                <span>{{ 'fund.received' | translate }}</span>
+                <strong>{{ fund.amountReceived | inr }}</strong>
+              </div>
+              <div class="fund-amount-row">
+                <span>{{ 'fund.totalAmount' | translate }}</span>
+                <strong>{{ fund.totalAmount | inr }}</strong>
+              </div>
+            </div>
+            <vp-budget-bar [spent]="fund.amountReceived" [allocated]="fund.totalAmount">
+            </vp-budget-bar>
+          </div>
+
+          <div class="empty-state" *ngIf="activeFunds.length === 0">
+            <mat-icon>account_balance</mat-icon>
+            <p>{{ 'common.noData' | translate }}</p>
+          </div>
+        </div>
+
+        <!-- Project Status Breakdown -->
+        <div class="status-panel fade-in" *ngIf="projectStatusCounts.length > 0">
+          <span class="section-title">{{ 'project.status' | translate }}</span>
+
+          <div class="status-breakdown">
+            <div class="status-row" *ngFor="let s of projectStatusCounts">
+              <div class="status-row-label">
+                <span class="status-dot" [style.background]="s.color"></span>
+                <span>{{ 'project.statuses.' + s.status | translate }}</span>
+              </div>
+              <div class="status-row-bar">
+                <div class="status-bar-fill"
+                     [style.width.%]="(s.count / stats.totalProjects) * 100"
+                     [style.background]="s.color">
+                </div>
+              </div>
+              <span class="status-row-count">{{ s.count }}</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </ng-container>
+
+</div>

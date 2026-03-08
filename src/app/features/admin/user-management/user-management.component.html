@@ -1,0 +1,289 @@
+<div class="page-container">
+
+  <!-- Header -->
+  <div class="page-header fade-in">
+    <div class="header-text">
+      <h1>{{ 'user.title' | translate }}</h1>
+      <p class="subtitle">{{ users.length }} registered users</p>
+    </div>
+    <button mat-raised-button color="primary" (click)="openCreate()">
+      <mat-icon>person_add</mat-icon> {{ 'user.createNew' | translate }}
+    </button>
+  </div>
+
+  <!-- Summary chips -->
+  <div *ngIf="!loading && users.length > 0" class="summary-row fade-in">
+    <div class="summary-chip" [style.background]="getRoleColor('ADMIN') + '18'" [style.color]="getRoleColor('ADMIN')">
+      <mat-icon>admin_panel_settings</mat-icon>
+      <span>{{ countByRole('ADMIN') }} Admins</span>
+    </div>
+    <div class="summary-chip" [style.background]="getRoleColor('OFFICER') + '18'" [style.color]="getRoleColor('OFFICER')">
+      <mat-icon>badge</mat-icon>
+      <span>{{ countByRole('OFFICER') }} Officers</span>
+    </div>
+    <div class="summary-chip" [style.background]="getRoleColor('AUDITOR') + '18'" [style.color]="getRoleColor('AUDITOR')">
+      <mat-icon>manage_search</mat-icon>
+      <span>{{ countByRole('AUDITOR') }} Auditors</span>
+    </div>
+    <div class="summary-chip active-chip">
+      <mat-icon>check_circle</mat-icon>
+      <span>{{ activeCount }} Active</span>
+    </div>
+    <div class="summary-chip inactive-chip" *ngIf="inactiveCount > 0">
+      <mat-icon>cancel</mat-icon>
+      <span>{{ inactiveCount }} Inactive</span>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-bar fade-in">
+    <mat-form-field appearance="outline" class="filter-search">
+      <mat-label>{{ 'common.search' | translate }}</mat-label>
+      <input matInput [(ngModel)]="searchTerm" placeholder="Name, username, email…">
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="filter-select">
+      <mat-label>{{ 'user.role' | translate }}</mat-label>
+      <mat-select [(ngModel)]="selectedRole">
+        <mat-option value="">{{ 'common.all' | translate }}</mat-option>
+        <mat-option *ngFor="let r of roles" [value]="r">{{ 'user.roles.' + r | translate }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-checkbox [(ngModel)]="showInactive" class="filter-checkbox">
+      Show inactive
+    </mat-checkbox>
+
+    <button mat-stroked-button (click)="resetFilters()" class="reset-btn">
+      <mat-icon>refresh</mat-icon> {{ 'common.reset' | translate }}
+    </button>
+  </div>
+
+  <!-- Main layout: table + slide-out form -->
+  <div class="main-layout" [class.has-form]="showForm">
+
+    <!-- Loading -->
+    <div *ngIf="loading" class="state-container">
+      <mat-spinner diameter="48"></mat-spinner><p>{{ 'common.loading' | translate }}</p>
+    </div>
+
+    <!-- Error -->
+    <div *ngIf="!loading && error" class="state-container error-state">
+      <mat-icon>error_outline</mat-icon><p>{{ 'common.error' | translate }}</p>
+      <button mat-raised-button color="primary" (click)="load()">Retry</button>
+    </div>
+
+    <!-- Empty -->
+    <div *ngIf="!loading && !error && filtered.length === 0" class="state-container">
+      <mat-icon>group_off</mat-icon><p>No users found.</p>
+    </div>
+
+    <!-- User table -->
+    <div *ngIf="!loading && !error && filtered.length > 0" class="table-wrapper fade-in">
+      <table mat-table [dataSource]="filtered" class="user-table">
+
+        <!-- Avatar + Name -->
+        <ng-container matColumnDef="user">
+          <th mat-header-cell *matHeaderCellDef>User</th>
+          <td mat-cell *matCellDef="let u">
+            <div class="user-cell">
+              <div class="avatar" [style.background]="getRoleColor(u.role) + '22'">
+                <span [style.color]="getRoleColor(u.role)">{{ u.fullName[0]?.toUpperCase() }}</span>
+              </div>
+              <div class="user-info">
+                <span class="full-name">{{ u.fullName }}</span>
+                <span class="username">@{{ u.username }}</span>
+              </div>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Email -->
+        <ng-container matColumnDef="email">
+          <th mat-header-cell *matHeaderCellDef>{{ 'user.email' | translate }}</th>
+          <td mat-cell *matCellDef="let u">
+            <div class="email-cell">
+              <mat-icon>email</mat-icon> {{ u.email }}
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Phone -->
+        <ng-container matColumnDef="phone">
+          <th mat-header-cell *matHeaderCellDef>{{ 'user.phone' | translate }}</th>
+          <td mat-cell *matCellDef="let u">{{ u.phone || '—' }}</td>
+        </ng-container>
+
+        <!-- Role -->
+        <ng-container matColumnDef="role">
+          <th mat-header-cell *matHeaderCellDef>{{ 'user.role' | translate }}</th>
+          <td mat-cell *matCellDef="let u">
+            <span class="role-chip"
+                  [style.background]="getRoleColor(u.role) + '18'"
+                  [style.color]="getRoleColor(u.role)">
+              <mat-icon>{{ getRoleIcon(u.role) }}</mat-icon>
+              {{ 'user.roles.' + u.role | translate }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Status -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>{{ 'user.status' | translate }}</th>
+          <td mat-cell *matCellDef="let u">
+            <span class="status-chip" [class.active]="u.isActive" [class.inactive]="!u.isActive">
+              <mat-icon>{{ u.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
+              {{ u.isActive ? ('user.active' | translate) : ('user.inactive' | translate) }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Last login -->
+        <ng-container matColumnDef="lastLogin">
+          <th mat-header-cell *matHeaderCellDef>Last Login</th>
+          <td mat-cell *matCellDef="let u" class="date-cell">
+            {{ u.lastLogin ? (u.lastLogin | date:'mediumDate') : '—' }}
+          </td>
+        </ng-container>
+
+        <!-- Actions -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let u">
+            <div class="action-btns">
+              <button mat-icon-button
+                      [matTooltip]="u.isActive ? ('user.deactivate' | translate) : ('user.activate' | translate)"
+                      [color]="u.isActive ? 'warn' : 'primary'"
+                      (click)="toggleActive(u)">
+                <mat-icon>{{ u.isActive ? 'person_off' : 'how_to_reg' }}</mat-icon>
+              </button>
+              <button mat-icon-button matTooltip="{{ 'user.resetPwd' | translate }}"
+                      (click)="openResetPwd(u)">
+                <mat-icon>lock_reset</mat-icon>
+              </button>
+            </div>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="['user','email','phone','role','status','lastLogin','actions']"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['user','email','phone','role','status','lastLogin','actions']"
+            class="table-row"></tr>
+      </table>
+    </div>
+
+    <!-- Slide-out form panel -->
+    <div class="form-panel" *ngIf="showForm">
+      <div class="form-panel-header">
+        <h3>
+          <mat-icon>{{ formMode === 'create' ? 'person_add' : 'lock_reset' }}</mat-icon>
+          {{ formMode === 'create' ? ('user.createNew' | translate) : ('user.resetPwd' | translate) }}
+          <span *ngIf="formMode === 'resetPwd'" class="for-user"> — {{ editingUser?.fullName }}</span>
+        </h3>
+        <button mat-icon-button (click)="closeForm()"><mat-icon>close</mat-icon></button>
+      </div>
+
+      <!-- Create User Form -->
+      <form *ngIf="formMode === 'create'" [formGroup]="userForm" class="form-body" (ngSubmit)="submitCreate()">
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'user.fullName' | translate }}</mat-label>
+          <input matInput formControlName="fullName">
+          <mat-error>{{ fieldError(userForm, 'fullName') }}</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'user.username' | translate }}</mat-label>
+          <input matInput formControlName="username" autocomplete="new-username">
+          <mat-hint>Lowercase letters, numbers and _ only</mat-hint>
+          <mat-error>{{ fieldError(userForm, 'username') }}</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'user.email' | translate }}</mat-label>
+          <input matInput type="email" formControlName="email">
+          <mat-error>{{ fieldError(userForm, 'email') }}</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'user.phone' | translate }}</mat-label>
+          <input matInput formControlName="phone">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'user.role' | translate }}</mat-label>
+          <mat-select formControlName="role">
+            <mat-option *ngFor="let r of roles" [value]="r">{{ 'user.roles.' + r | translate }}</mat-option>
+          </mat-select>
+          <mat-error>{{ fieldError(userForm, 'role') }}</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Password</mat-label>
+          <input matInput [type]="showPassword ? 'text' : 'password'"
+                 formControlName="password" autocomplete="new-password">
+          <button type="button" mat-icon-button matSuffix (click)="showPassword = !showPassword">
+            <mat-icon>{{ showPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          <mat-error>{{ fieldError(userForm, 'password') }}</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Confirm Password</mat-label>
+          <input matInput [type]="showConfirm ? 'text' : 'password'"
+                 formControlName="confirm" autocomplete="new-password">
+          <button type="button" mat-icon-button matSuffix (click)="showConfirm = !showConfirm">
+            <mat-icon>{{ showConfirm ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          <mat-error>{{ fieldError(userForm, 'confirm') }}</mat-error>
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button type="button" mat-stroked-button (click)="closeForm()">Cancel</button>
+          <button type="submit" mat-raised-button color="primary" [disabled]="formSaving">
+            <mat-spinner *ngIf="formSaving" diameter="18"></mat-spinner>
+            <span *ngIf="!formSaving">Create User</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Reset Password Form -->
+      <form *ngIf="formMode === 'resetPwd'" [formGroup]="pwdForm" class="form-body" (ngSubmit)="submitResetPwd()">
+
+        <div class="reset-info">
+          <mat-icon>info</mat-icon>
+          <p>Set a new password for <strong>{{ editingUser?.username }}</strong>. The user will need to use this password on their next login.</p>
+        </div>
+
+        <mat-form-field appearance="outline">
+          <mat-label>New Password</mat-label>
+          <input matInput [type]="showPassword ? 'text' : 'password'"
+                 formControlName="newPassword" autocomplete="new-password">
+          <button type="button" mat-icon-button matSuffix (click)="showPassword = !showPassword">
+            <mat-icon>{{ showPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          <mat-error>{{ fieldError(pwdForm, 'newPassword') }}</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Confirm Password</mat-label>
+          <input matInput [type]="showConfirm ? 'text' : 'password'"
+                 formControlName="confirm" autocomplete="new-password">
+          <button type="button" mat-icon-button matSuffix (click)="showConfirm = !showConfirm">
+            <mat-icon>{{ showConfirm ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          <mat-error>{{ fieldError(pwdForm, 'confirm') }}</mat-error>
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button type="button" mat-stroked-button (click)="closeForm()">Cancel</button>
+          <button type="submit" mat-raised-button color="primary" [disabled]="formSaving">
+            <mat-spinner *ngIf="formSaving" diameter="18"></mat-spinner>
+            <span *ngIf="!formSaving">Reset Password</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+  </div><!-- /main-layout -->
+</div>

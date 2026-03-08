@@ -1,0 +1,153 @@
+<div class="page-container">
+
+  <!-- Header -->
+  <div class="page-header fade-in">
+    <div class="header-text">
+      <h1>{{ 'contractor.title' | translate }}</h1>
+      <p class="subtitle">{{ totalElements }} registered contractors</p>
+    </div>
+  </div>
+
+  <!-- Summary chips -->
+  <div *ngIf="!loading && !error && contractors.length > 0" class="summary-row fade-in">
+    <div class="summary-chip active">
+      <mat-icon>verified</mat-icon>
+      <span>{{ activeCount }} Active</span>
+    </div>
+    <div class="summary-chip blacklisted" *ngIf="blacklistedCount > 0">
+      <mat-icon>block</mat-icon>
+      <span>{{ blacklistedCount }} Blacklisted</span>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-bar fade-in">
+    <mat-form-field appearance="outline" class="filter-search">
+      <mat-label>{{ 'common.search' | translate }}</mat-label>
+      <input matInput [(ngModel)]="searchTerm"
+             placeholder="Name, registration number, contact…">
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="filter-select">
+      <mat-label>{{ 'contractor.category' | translate }}</mat-label>
+      <mat-select [(ngModel)]="selectedCategory">
+        <mat-option value="">{{ 'common.all' | translate }}</mat-option>
+        <mat-option *ngFor="let c of categories" [value]="c">
+          {{ 'contractor.categories.' + c | translate }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-checkbox [(ngModel)]="showBlacklisted" class="blacklist-toggle">
+      Show blacklisted
+    </mat-checkbox>
+
+    <button mat-stroked-button (click)="resetFilters()" class="reset-btn">
+      <mat-icon>refresh</mat-icon> {{ 'common.reset' | translate }}
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="state-container">
+    <mat-spinner diameter="48"></mat-spinner>
+    <p>{{ 'common.loading' | translate }}</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="!loading && error" class="state-container error-state">
+    <mat-icon>error_outline</mat-icon>
+    <p>{{ 'common.error' | translate }}</p>
+    <button mat-raised-button color="primary" (click)="load()">Retry</button>
+  </div>
+
+  <!-- Empty -->
+  <div *ngIf="!loading && !error && filteredContractors.length === 0" class="state-container">
+    <mat-icon>engineering</mat-icon>
+    <p>{{ 'common.noData' | translate }}</p>
+  </div>
+
+  <!-- Contractor grid -->
+  <div *ngIf="!loading && !error && filteredContractors.length > 0" class="contractors-grid">
+    <div class="contractor-card fade-in"
+         *ngFor="let c of filteredContractors"
+         [class.blacklisted]="c.isBlacklisted">
+
+      <!-- Card header -->
+      <div class="card-header">
+        <div class="category-icon">
+          <mat-icon>{{ getCategoryIcon(c.category) }}</mat-icon>
+        </div>
+        <div class="header-info">
+          <h3 class="contractor-name">{{ label(c.nameEn, c.nameHi) }}</h3>
+          <span class="reg-number">{{ c.registrationNumber }}</span>
+        </div>
+        <span class="status-badge" [class.active]="!c.isBlacklisted" [class.blacklisted-badge]="c.isBlacklisted">
+          <mat-icon>{{ c.isBlacklisted ? 'block' : 'verified' }}</mat-icon>
+          {{ c.isBlacklisted ? ('contractor.blacklisted' | translate) : ('contractor.active' | translate) }}
+        </span>
+      </div>
+
+      <mat-divider></mat-divider>
+
+      <!-- Category -->
+      <div class="category-row">
+        <span class="category-chip">
+          <mat-icon>{{ getCategoryIcon(c.category) }}</mat-icon>
+          {{ 'contractor.categories.' + c.category | translate }}
+        </span>
+      </div>
+
+      <!-- Contact details -->
+      <div class="contact-grid">
+        <div class="contact-item" *ngIf="c.contactPerson">
+          <mat-icon>person</mat-icon>
+          <span>{{ c.contactPerson }}</span>
+        </div>
+        <div class="contact-item" *ngIf="c.phone">
+          <mat-icon>phone</mat-icon>
+          <span>{{ c.phone }}</span>
+        </div>
+        <div class="contact-item" *ngIf="c.email">
+          <mat-icon>email</mat-icon>
+          <span>{{ c.email }}</span>
+        </div>
+        <div class="contact-item" *ngIf="c.addressEn">
+          <mat-icon>location_on</mat-icon>
+          <span>{{ label(c.addressEn, c.addressHi) }}</span>
+        </div>
+      </div>
+
+      <!-- Tax IDs -->
+      <div class="tax-row" *ngIf="c.panNumber || c.gstNumber">
+        <span class="tax-chip" *ngIf="c.panNumber">
+          PAN: {{ c.panNumber }}
+        </span>
+        <span class="tax-chip" *ngIf="c.gstNumber">
+          GST: {{ c.gstNumber }}
+        </span>
+      </div>
+
+      <!-- Blacklist reason -->
+      <div class="blacklist-reason" *ngIf="c.isBlacklisted && c.blacklistReason">
+        <mat-icon>warning</mat-icon>
+        <span>{{ c.blacklistReason }}</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div *ngIf="totalPages > 1" class="pagination">
+    <button mat-icon-button [disabled]="page === 0" (click)="goToPage(page - 1)">
+      <mat-icon>chevron_left</mat-icon>
+    </button>
+    <button mat-button *ngFor="let p of pages"
+            [class.active-page]="p === page"
+            (click)="goToPage(p)">{{ p + 1 }}</button>
+    <button mat-icon-button [disabled]="page === totalPages - 1" (click)="goToPage(page + 1)">
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+  </div>
+
+</div>
