@@ -1,7 +1,340 @@
 <div class="page-container">
-  <div class="page-header">
-    <h1>Contractor Management</h1>
+
+  <!-- Header -->
+  <div class="page-header fade-in">
+    <div class="header-text">
+      <h1>Contractor Management</h1>
+      <p class="subtitle">Register and manage contractors for village projects</p>
+    </div>
+    <button mat-raised-button color="primary" (click)="openCreate()">
+      <mat-icon>person_add</mat-icon> Register Contractor
+    </button>
   </div>
-  <!-- TODO: Implement Contractor Management view -->
-  <p>{{ 'common.loading' | translate }}</p>
+
+  <!-- Summary chips -->
+  <div class="summary-row fade-in" *ngIf="!loading && contractors.length > 0">
+    <span class="sum-chip total">{{ contractors.length }} Total</span>
+    <span class="sum-chip active">{{ activeCount }} Active</span>
+    <span class="sum-chip blacklisted" *ngIf="blacklistedCount > 0">
+      {{ blacklistedCount }} Blacklisted
+    </span>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-row fade-in">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Search name, registration, contact…</mat-label>
+      <input matInput [(ngModel)]="searchTerm">
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Category</mat-label>
+      <mat-select [(ngModel)]="categoryFilter">
+        <mat-option value="">All Categories</mat-option>
+        <mat-option *ngFor="let cat of categories" [value]="cat">
+          <mat-icon>{{ categoryIcons[cat] }}</mat-icon> {{ cat }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+    <mat-slide-toggle [(ngModel)]="showBlacklisted" color="warn" class="bl-toggle">
+      Show Blacklisted
+    </mat-slide-toggle>
+  </div>
+
+  <!-- Loading / Error / Empty -->
+  <div *ngIf="loading" class="state-container">
+    <mat-spinner diameter="48"></mat-spinner><p>Loading contractors…</p>
+  </div>
+  <div *ngIf="!loading && error" class="state-container error-state">
+    <mat-icon>error_outline</mat-icon><p>Failed to load contractors.</p>
+    <button mat-raised-button color="primary" (click)="loadContractors()">Retry</button>
+  </div>
+  <div *ngIf="!loading && !error && filtered.length === 0" class="state-container">
+    <mat-icon>engineering</mat-icon>
+    <p>No contractors found. <a (click)="openCreate()">Register the first one.</a></p>
+  </div>
+
+  <!-- Main layout -->
+  <div *ngIf="!loading && !error && filtered.length > 0"
+       class="main-layout" [class.has-panel]="panelOpen">
+
+    <!-- Table -->
+    <div class="table-wrapper fade-in">
+      <table mat-table [dataSource]="filtered" class="contractors-table">
+
+        <!-- Contractor -->
+        <ng-container matColumnDef="contractor">
+          <th mat-header-cell *matHeaderCellDef>Contractor</th>
+          <td mat-cell *matCellDef="let c">
+            <div class="contractor-cell">
+              <div class="contractor-avatar"
+                   [style.background]="categoryColors[$any(c.category)] + '20'"
+                   [style.color]="categoryColors[$any(c.category)]">
+                <mat-icon>{{ categoryIcons[$any(c.category)] }}</mat-icon>
+              </div>
+              <div class="contractor-info">
+                <span class="contractor-name">{{ c.nameEn }}</span>
+                <span class="contractor-name-hi" *ngIf="c.nameHi">{{ c.nameHi }}</span>
+              </div>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Category -->
+        <ng-container matColumnDef="category">
+          <th mat-header-cell *matHeaderCellDef>Category</th>
+          <td mat-cell *matCellDef="let c">
+            <span class="cat-chip"
+                  [style.background]="categoryColors[$any(c.category)] + '15'"
+                  [style.color]="categoryColors[$any(c.category)]">
+              <mat-icon>{{ categoryIcons[$any(c.category)] }}</mat-icon>
+              {{ c.category }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Contact -->
+        <ng-container matColumnDef="contact">
+          <th mat-header-cell *matHeaderCellDef>Contact</th>
+          <td mat-cell *matCellDef="let c">
+            <div class="contact-cell">
+              <span *ngIf="c.contactPerson" class="contact-person">
+                <mat-icon>person</mat-icon>{{ c.contactPerson }}
+              </span>
+              <span *ngIf="c.phone" class="contact-phone">
+                <mat-icon>phone</mat-icon>{{ c.phone }}
+              </span>
+              <span *ngIf="c.email" class="contact-email">
+                <mat-icon>email</mat-icon>{{ c.email }}
+              </span>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Registration -->
+        <ng-container matColumnDef="registration">
+          <th mat-header-cell *matHeaderCellDef>Registration</th>
+          <td mat-cell *matCellDef="let c">
+            <div class="reg-cell">
+              <span class="reg-number">{{ c.registrationNumber }}</span>
+              <span class="pan-number" *ngIf="c.panNumber">PAN: {{ c.panNumber }}</span>
+              <span class="gst-number" *ngIf="c.gstNumber">GST: {{ c.gstNumber }}</span>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Status -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let c">
+            <div class="status-cell">
+              <span class="status-chip active-chip" *ngIf="!c.isBlacklisted">Active</span>
+              <div class="blacklisted-wrap" *ngIf="c.isBlacklisted">
+                <span class="status-chip blacklist-chip">Blacklisted</span>
+                <span class="bl-reason" *ngIf="c.blacklistReason"
+                      [matTooltip]="c.blacklistReason">
+                  {{ c.blacklistReason | slice:0:30 }}…
+                </span>
+              </div>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Actions -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let c">
+            <button mat-icon-button matTooltip="Edit"
+                    (click)="openEdit(c); $event.stopPropagation()">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button matTooltip="Blacklist" color="warn"
+                    *ngIf="!c.isBlacklisted"
+                    (click)="openBlacklist(c); $event.stopPropagation()">
+              <mat-icon>block</mat-icon>
+            </button>
+            <button mat-icon-button matTooltip="Remove from Blacklist"
+                    style="color:#2e7d32"
+                    *ngIf="c.isBlacklisted"
+                    (click)="removeBlacklist(c); $event.stopPropagation()">
+              <mat-icon>check_circle</mat-icon>
+            </button>
+            <button mat-icon-button matTooltip="Delete"
+                    (click)="promptDelete(c); $event.stopPropagation()">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"
+            class="table-row"
+            [class.blacklisted-row]="row.isBlacklisted"
+            (click)="openEdit(row)"></tr>
+      </table>
+    </div>
+
+    <!-- Slide-out panel -->
+    <div class="form-panel" *ngIf="panelOpen">
+
+      <!-- CREATE / EDIT PANEL -->
+      <ng-container *ngIf="panelMode === 'create' || panelMode === 'edit'">
+        <div class="panel-header">
+          <h2>{{ panelMode === 'edit' ? 'Edit Contractor' : 'Register Contractor' }}</h2>
+          <button mat-icon-button (click)="closePanel()"><mat-icon>close</mat-icon></button>
+        </div>
+        <form class="panel-form" [formGroup]="form" (ngSubmit)="save()">
+
+          <!-- Name EN + HI -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Contractor Name (English) *</mat-label>
+            <input matInput formControlName="nameEn">
+            <mat-error *ngIf="hasError(form,'nameEn','required')">Required</mat-error>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Contractor Name (Hindi)</mat-label>
+            <input matInput formControlName="nameHi">
+          </mat-form-field>
+
+          <!-- Category + Registration -->
+          <div class="two-col">
+            <mat-form-field appearance="outline">
+              <mat-label>Category *</mat-label>
+              <mat-select formControlName="category">
+                <mat-option *ngFor="let cat of categories" [value]="cat">
+                  <mat-icon>{{ categoryIcons[cat] }}</mat-icon> {{ cat }}
+                </mat-option>
+              </mat-select>
+              <mat-error *ngIf="hasError(form,'category','required')">Required</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Registration Number *</mat-label>
+              <input matInput formControlName="registrationNumber">
+              <mat-error *ngIf="hasError(form,'registrationNumber','required')">Required</mat-error>
+            </mat-form-field>
+          </div>
+
+          <!-- Contact Person + Phone -->
+          <div class="two-col">
+            <mat-form-field appearance="outline">
+              <mat-label>Contact Person</mat-label>
+              <input matInput formControlName="contactPerson">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Phone</mat-label>
+              <input matInput formControlName="phone" placeholder="10-digit mobile">
+              <mat-error *ngIf="hasError(form,'phone','pattern')">Valid 10-digit number</mat-error>
+            </mat-form-field>
+          </div>
+
+          <!-- Email -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Email</mat-label>
+            <input matInput formControlName="email" type="email">
+            <mat-error *ngIf="hasError(form,'email','email')">Invalid email</mat-error>
+          </mat-form-field>
+
+          <!-- PAN + GST -->
+          <div class="two-col">
+            <mat-form-field appearance="outline">
+              <mat-label>PAN Number</mat-label>
+              <input matInput formControlName="panNumber" placeholder="ABCDE1234F"
+                     style="text-transform:uppercase">
+              <mat-error *ngIf="hasError(form,'panNumber','pattern')">Invalid PAN (e.g. ABCDE1234F)</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>GST Number</mat-label>
+              <input matInput formControlName="gstNumber"
+                     style="text-transform:uppercase">
+              <mat-error *ngIf="hasError(form,'gstNumber','pattern')">Invalid GST number</mat-error>
+            </mat-form-field>
+          </div>
+
+          <!-- Address EN + HI -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Address (English)</mat-label>
+            <textarea matInput formControlName="addressEn" rows="2"></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Address (Hindi)</mat-label>
+            <textarea matInput formControlName="addressHi" rows="2"></textarea>
+          </mat-form-field>
+
+          <div class="panel-actions">
+            <button mat-stroked-button type="button" (click)="closePanel()" [disabled]="saving">Cancel</button>
+            <button mat-raised-button color="primary" type="submit" [disabled]="saving">
+              <mat-spinner diameter="18" *ngIf="saving"></mat-spinner>
+              <span *ngIf="!saving">{{ panelMode === 'edit' ? 'Update' : 'Register' }}</span>
+            </button>
+          </div>
+        </form>
+      </ng-container>
+
+      <!-- BLACKLIST PANEL -->
+      <ng-container *ngIf="panelMode === 'blacklist'">
+        <div class="panel-header blacklist-header">
+          <h2>Blacklist Contractor</h2>
+          <button mat-icon-button (click)="closePanel()"><mat-icon>close</mat-icon></button>
+        </div>
+        <div class="panel-form">
+          <div class="blacklist-target">
+            <mat-icon>engineering</mat-icon>
+            <div>
+              <span class="bl-name">{{ editingContractor?.nameEn }}</span>
+              <span class="bl-reg">{{ editingContractor?.registrationNumber }}</span>
+            </div>
+          </div>
+          <p class="bl-warning">
+            <mat-icon>warning</mat-icon>
+            Blacklisting will prevent this contractor from being assigned to new projects.
+          </p>
+          <form [formGroup]="blacklistForm" (ngSubmit)="submitBlacklist()">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Reason for Blacklisting *</mat-label>
+              <textarea matInput formControlName="reason" rows="4"
+                        placeholder="Describe the reason for blacklisting…"></textarea>
+              <mat-hint align="end">{{ blacklistForm.get('reason')?.value?.length || 0 }}/500</mat-hint>
+              <mat-error *ngIf="hasError(blacklistForm,'reason','required')">Reason is required</mat-error>
+              <mat-error *ngIf="hasError(blacklistForm,'reason','maxlength')">Max 500 characters</mat-error>
+            </mat-form-field>
+            <div class="panel-actions">
+              <button mat-stroked-button type="button" (click)="closePanel()" [disabled]="saving">Cancel</button>
+              <button mat-raised-button color="warn" type="submit" [disabled]="saving">
+                <mat-spinner diameter="18" *ngIf="saving"></mat-spinner>
+                <span *ngIf="!saving">Blacklist</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </ng-container>
+
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div *ngIf="!loading && totalPages > 1" class="pagination fade-in">
+    <button mat-icon-button [disabled]="page===0" (click)="goToPage(0)"><mat-icon>first_page</mat-icon></button>
+    <button mat-icon-button [disabled]="page===0" (click)="goToPage(page-1)"><mat-icon>chevron_left</mat-icon></button>
+    <span class="page-info">Page {{ page+1 }} of {{ totalPages }} · {{ totalElements }} contractors</span>
+    <button mat-icon-button [disabled]="page===totalPages-1" (click)="goToPage(page+1)"><mat-icon>chevron_right</mat-icon></button>
+    <button mat-icon-button [disabled]="page===totalPages-1" (click)="goToPage(totalPages-1)"><mat-icon>last_page</mat-icon></button>
+  </div>
+
+</div>
+
+<!-- Delete confirmation -->
+<div class="overlay" *ngIf="confirmDelete" (click)="cancelDelete()">
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <mat-icon color="warn">warning</mat-icon>
+      <h3>Delete Contractor</h3>
+    </div>
+    <p>Delete <strong>{{ deleteTarget?.nameEn }}</strong> ({{ deleteTarget?.registrationNumber }})?
+       This will fail if the contractor has linked expenditures or project assignments.</p>
+    <div class="dialog-actions">
+      <button mat-stroked-button (click)="cancelDelete()">Cancel</button>
+      <button mat-raised-button color="warn" (click)="confirmDeletion()">Delete</button>
+    </div>
+  </div>
 </div>

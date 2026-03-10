@@ -1,0 +1,48 @@
+<!-- Matches the shell header exactly — same green bar, same brand.
+     Only difference: no hamburger, no user-menu, no logout.
+     Shows Login button for guests. Hidden entirely when inside shell (logged-in). -->
+<mat-toolbar class="app-header">
+
+  <!-- Brand -->
+  <div class="brand" routerLink="/dashboard" style="cursor:pointer">
+    <span class="brand-icon">🌿</span>
+    <span class="brand-name">{{ 'app.name' | translate }}</span>
+    <span class="brand-tagline hide-mobile">{{ 'app.tagline' | translate }}</span>
+  </div>
+
+  <!-- Nav links -->
+  <div class="nav-links hide-mobile">
+    <a mat-button class="nav-link"
+       routerLink="/dashboard" routerLinkActive="nav-active"
+       [routerLinkActiveOptions]="{exact:true}">
+      <mat-icon>dashboard</mat-icon>
+      {{ 'nav.dashboard' | translate }}
+    </a>
+    <a mat-button class="nav-link"
+       routerLink="/projects" routerLinkActive="nav-active">
+      <mat-icon>construction</mat-icon>
+      {{ 'nav.projects' | translate }}
+    </a>
+    <a mat-button class="nav-link"
+       routerLink="/funds" routerLinkActive="nav-active">
+      <mat-icon>account_balance</mat-icon>
+      {{ 'nav.funds' | translate }}
+    </a>
+  </div>
+
+  <span class="spacer"></span>
+
+  <!-- Language toggle -->
+  <button mat-icon-button class="lang-icon-btn"
+          (click)="toggleLang()"
+          [title]="'nav.switchLang' | translate">
+    <mat-icon>translate</mat-icon>
+  </button>
+
+  <!-- Login button — visible only to guests -->
+  <a mat-stroked-button class="login-btn" routerLink="/login" *ngIf="!isLoggedIn">
+    <mat-icon>login</mat-icon>
+    <span class="hide-mobile">{{ 'nav.login' | translate }}</span>
+  </a>
+
+</mat-toolbar>

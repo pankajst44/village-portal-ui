@@ -1,13 +1,15 @@
 import { NgModule }             from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { AuthGuard }  from './core/guards/auth.guard';
-import { RoleGuard }  from './core/guards/auth.guard';
-import { GuestGuard } from './core/guards/auth.guard';
-import { ShellComponent } from './layout/shell/shell.component';
+import { AuthGuard }         from './core/guards/auth.guard';
+import { RoleGuard }         from './core/guards/auth.guard';
+import { GuestGuard }        from './core/guards/auth.guard';
+import { ShellMatchGuard }   from './core/guards/auth.guard';
+import { GuestMatchGuard }   from './core/guards/auth.guard';
+import { ShellComponent }    from './layout/shell/shell.component';
 
 const routes: Routes = [
 
-  // ── Guest-only ────────────────────────────────────────────
+  // ── Guest-only: /login ────────────────────────────────────
   {
     path: 'login',
     canActivate: [GuestGuard],
@@ -15,39 +17,31 @@ const routes: Routes = [
       import('./features/auth/auth.module').then(m => m.AuthModule)
   },
 
-  // ── Public routes (no auth, no shell) ────────────────────
-  {
-    path: '',
-    loadChildren: () =>
-      import('./features/public/public.module').then(m => m.PublicModule)
-  },
-
-  // ── Authenticated shell (header + sidebar + logout) ───────
+  // ── Authenticated shell — only when logged in ─────────────
   {
     path: '',
     component: ShellComponent,
+    canMatch:    [ShellMatchGuard],
     canActivate: [AuthGuard],
     children: [
-
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-
-      // Dashboard — own module, NOT shared with public routes
       {
         path: 'dashboard',
         loadChildren: () =>
           import('./features/dashboard/dashboard.module').then(m => m.DashboardModule)
       },
-
-      // Officer area
+      {
+        path: '',
+        loadChildren: () =>
+          import('./features/public/public.module').then(m => m.PublicModule)
+      },
       {
         path: 'officer',
         canActivate: [RoleGuard],
-        data: { roles: ['ADMIN', 'OFFICER'] },
+        data: { roles: ['ADMIN', 'OFFICER', 'AUDITOR'] },
         loadChildren: () =>
           import('./features/officer/officer.module').then(m => m.OfficerModule)
       },
-
-      // Admin area
       {
         path: 'admin',
         canActivate: [RoleGuard],
@@ -55,14 +49,30 @@ const routes: Routes = [
         loadChildren: () =>
           import('./features/admin/admin.module').then(m => m.AdminModule)
       },
-
-      // Auditor area
       {
         path: 'auditor',
         canActivate: [RoleGuard],
         data: { roles: ['ADMIN', 'AUDITOR'] },
         loadChildren: () =>
           import('./features/auditor/auditor.module').then(m => m.AuditorModule)
+      },
+    ]
+  },
+
+  // ── Guest public pages — only when NOT logged in ──────────
+  {
+    path: '',
+    canMatch: [GuestMatchGuard],
+    children: [
+      {
+        path: 'dashboard',
+        loadChildren: () =>
+          import('./features/dashboard/dashboard.module').then(m => m.DashboardModule)
+      },
+      {
+        path: '',
+        loadChildren: () =>
+          import('./features/public/public.module').then(m => m.PublicModule)
       },
     ]
   },

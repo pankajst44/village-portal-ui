@@ -1,7 +1,242 @@
 <div class="page-container">
-  <div class="page-header">
-    <h1>Document Upload</h1>
+
+  <!-- Header -->
+  <div class="page-header fade-in">
+    <div class="header-text">
+      <h1>Documents</h1>
+      <p class="subtitle">Upload and view project documents</p>
+    </div>
   </div>
-  <!-- TODO: Implement Document Upload view -->
-  <p>{{ 'common.loading' | translate }}</p>
+
+  <!-- Tab bar -->
+  <div class="tab-bar fade-in">
+    <button class="tab-btn" [class.active]="activeTab==='upload'" (click)="onTabChange('upload')">
+      <mat-icon>upload_file</mat-icon> Upload Document
+    </button>
+    <button class="tab-btn" [class.active]="activeTab==='view'" (click)="onTabChange('view')">
+      <mat-icon>folder_open</mat-icon> View Documents
+    </button>
+  </div>
+
+  <!-- ══ UPLOAD TAB ══════════════════════════════════════ -->
+  <ng-container *ngIf="activeTab === 'upload'">
+    <div class="upload-layout fade-in">
+
+      <!-- Drop zone -->
+      <div class="drop-zone" [class.drag-over]="dragOver" [class.has-file]="selectedFile"
+           (dragover)="onDragOver($event)" (dragleave)="onDragLeave()" (drop)="onDrop($event)">
+        <ng-container *ngIf="!selectedFile">
+          <mat-icon class="drop-icon">cloud_upload</mat-icon>
+          <p class="drop-text">Drag & drop a file here</p>
+          <p class="drop-sub">or</p>
+          <label class="browse-btn">
+            <input type="file" [accept]="acceptedTypes" (change)="onFileSelected($event)" hidden>
+            Browse Files
+          </label>
+          <p class="drop-hint">PDF, Images, Word, Excel — max 10MB</p>
+        </ng-container>
+        <ng-container *ngIf="selectedFile">
+          <mat-icon class="file-icon">insert_drive_file</mat-icon>
+          <p class="file-name">{{ selectedFile.name }}</p>
+          <p class="file-size">{{ fileSize }}</p>
+          <div class="file-actions">
+            <label class="browse-btn small">
+              <input type="file" [accept]="acceptedTypes" (change)="onFileSelected($event)" hidden>
+              Change
+            </label>
+            <button class="clear-btn" (click)="clearFile()">Remove</button>
+          </div>
+        </ng-container>
+      </div>
+
+      <!-- Form -->
+      <form class="upload-form" [formGroup]="form" (ngSubmit)="upload()">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Document Type *</mat-label>
+          <mat-select formControlName="documentType">
+            <mat-option *ngFor="let t of docTypes" [value]="t">
+              <mat-icon [style.color]="docTypeColors[t]">{{ docTypeIcons[t] }}</mat-icon>
+              {{ t | titlecase }}
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="hasError('documentType','required')">Required</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Title (English)</mat-label>
+          <input matInput formControlName="titleEn" placeholder="Brief document title">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Title (Hindi)</mat-label>
+          <input matInput formControlName="titleHi">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Link to Project (optional)</mat-label>
+          <mat-select formControlName="projectId">
+            <mat-option [value]="null">None</mat-option>
+            <mat-option *ngFor="let p of projects" [value]="p.id">
+              {{ p.projectCode }} — {{ p.nameEn }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Link to Fund (optional)</mat-label>
+          <mat-select formControlName="fundId">
+            <mat-option [value]="null">None</mat-option>
+            <mat-option *ngFor="let f of funds" [value]="f.id">
+              {{ f.schemeNameEn }} ({{ f.financialYear }})
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <div class="toggle-row">
+          <mat-slide-toggle formControlName="isPublic" color="primary">
+            Visible on Public Portal
+          </mat-slide-toggle>
+        </div>
+
+        <button mat-raised-button color="primary" type="submit"
+                [disabled]="uploading || !selectedFile" class="upload-btn">
+          <mat-spinner diameter="18" *ngIf="uploading"></mat-spinner>
+          <mat-icon *ngIf="!uploading">upload</mat-icon>
+          <span>{{ uploading ? 'Uploading…' : 'Upload Document' }}</span>
+        </button>
+      </form>
+    </div>
+  </ng-container>
+
+  <!-- ══ VIEW TAB ════════════════════════════════════════ -->
+  <ng-container *ngIf="activeTab === 'view'">
+
+    <div class="view-filter fade-in">
+      <mat-form-field appearance="outline" class="project-selector">
+        <mat-label>Select Project</mat-label>
+        <mat-select [(ngModel)]="selectedProjectId" (ngModelChange)="onViewProjectChange()">
+          <mat-option *ngFor="let p of projects" [value]="p.id">
+            {{ p.projectCode }} — {{ p.nameEn }}
+          </mat-option>
+        </mat-select>
+        <mat-icon matSuffix>construction</mat-icon>
+      </mat-form-field>
+    </div>
+
+    <div *ngIf="!selectedProjectId" class="state-container">
+      <mat-icon>folder_open</mat-icon><p>Select a project to view its documents.</p>
+    </div>
+    <div *ngIf="loadingDocs" class="state-container">
+      <mat-spinner diameter="48"></mat-spinner><p>Loading documents…</p>
+    </div>
+    <div *ngIf="!loadingDocs && selectedProjectId && documents.length === 0" class="state-container">
+      <mat-icon>description</mat-icon><p>No documents uploaded for this project yet.</p>
+    </div>
+
+    <!-- Doc list + preview side-by-side -->
+    <div *ngIf="!loadingDocs && documents.length > 0"
+         class="view-layout" [class.has-preview]="previewDoc">
+
+      <!-- Card grid -->
+      <div class="doc-grid fade-in">
+        <div class="doc-card" *ngFor="let doc of documents"
+             [class.active-card]="previewDoc?.id === doc.id"
+             (click)="openPreview(doc)">
+          <div class="doc-card-header"
+               [style.background]="docTypeColors[$any(doc.documentType)] + '15'">
+            <mat-icon [style.color]="docTypeColors[$any(doc.documentType)]">
+              {{ docTypeIcons[$any(doc.documentType)] }}
+            </mat-icon>
+            <span class="doc-type-label" [style.color]="docTypeColors[$any(doc.documentType)]">
+              {{ doc.documentType }}
+            </span>
+            <span class="preview-hint" *ngIf="canPreview(doc)">
+              <mat-icon>visibility</mat-icon>
+            </span>
+            <span class="public-badge" *ngIf="doc.isPublic">Public</span>
+          </div>
+          <div class="doc-card-body">
+            <p class="doc-title">{{ doc.titleEn || doc.originalFileName }}</p>
+            <p class="doc-filename" *ngIf="doc.titleEn">{{ doc.originalFileName }}</p>
+            <div class="doc-meta">
+              <span><mat-icon>person</mat-icon>{{ doc.uploadedByUsername || '—' }}</span>
+              <span><mat-icon>schedule</mat-icon>{{ doc.uploadedAt | date:'dd MMM yyyy' }}</span>
+              <span><mat-icon>storage</mat-icon>{{ formatSize(doc.fileSizeKb) }}</span>
+            </div>
+          </div>
+          <div class="doc-card-actions" (click)="$event.stopPropagation()">
+            <button mat-icon-button matTooltip="Preview" color="primary"
+                    *ngIf="canPreview(doc)"
+                    (click)="openPreview(doc)">
+              <mat-icon>visibility</mat-icon>
+            </button>
+            <button mat-icon-button matTooltip="Download" (click)="download(doc)">
+              <mat-icon>download</mat-icon>
+            </button>
+            <button mat-icon-button matTooltip="Delete" color="warn" (click)="deleteDoc(doc)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preview pane -->
+      <div class="preview-pane fade-in" *ngIf="previewDoc">
+        <div class="preview-header">
+          <div class="preview-title">
+            <mat-icon [style.color]="docTypeColors[$any(previewDoc.documentType)]">
+              {{ docTypeIcons[$any(previewDoc.documentType)] }}
+            </mat-icon>
+            <span>{{ previewDoc.titleEn || previewDoc.originalFileName }}</span>
+          </div>
+          <div class="preview-header-actions">
+            <button mat-icon-button matTooltip="Download" (click)="download(previewDoc)">
+              <mat-icon>download</mat-icon>
+            </button>
+            <button mat-icon-button matTooltip="Close preview" (click)="closePreview()">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div class="preview-body" *ngIf="previewLoading">
+          <div class="preview-state">
+            <mat-spinner diameter="40"></mat-spinner>
+            <p>Loading preview…</p>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div class="preview-body" *ngIf="!previewLoading && previewError">
+          <div class="preview-state">
+            <mat-icon class="preview-error-icon">broken_image</mat-icon>
+            <p>Could not load preview.</p>
+            <button mat-stroked-button (click)="download(previewDoc)">
+              <mat-icon>download</mat-icon> Download instead
+            </button>
+          </div>
+        </div>
+
+        <!-- Image preview -->
+        <div class="preview-body" *ngIf="!previewLoading && !previewError && previewIsImage">
+          <img [src]="safeImageUrl" class="preview-image" alt="Document preview">
+        </div>
+
+        <!-- PDF preview -->
+        <div class="preview-body pdf-body" *ngIf="!previewLoading && !previewError && previewIsPdf">
+          <iframe [src]="previewUrl" class="preview-iframe" title="PDF Preview"></iframe>
+        </div>
+
+        <!-- File info footer -->
+        <div class="preview-footer">
+          <span>{{ previewDoc.originalFileName }}</span>
+          <span>{{ formatSize(previewDoc.fileSizeKb) }}</span>
+          <span>{{ previewDoc.uploadedAt | date:'dd MMM yyyy' }}</span>
+        </div>
+      </div>
+
+    </div>
+  </ng-container>
+
 </div>

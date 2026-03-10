@@ -1,7 +1,266 @@
 <div class="page-container">
-  <div class="page-header">
-    <h1>Spending Entry</h1>
+
+  <!-- Header -->
+  <div class="page-header fade-in">
+    <div class="header-text">
+      <h1>Record Expenditure</h1>
+      <p class="subtitle">Log payments and spending for project work</p>
+    </div>
+    <button mat-raised-button color="primary" (click)="openCreate()">
+      <mat-icon>add</mat-icon> Record Expenditure
+    </button>
   </div>
-  <!-- TODO: Implement Spending Entry view -->
-  <p>{{ 'common.loading' | translate }}</p>
+
+  <!-- Project selector + filters -->
+  <div class="filter-row fade-in">
+    <mat-form-field appearance="outline" class="project-selector">
+      <mat-label>Select Project</mat-label>
+      <mat-select [(ngModel)]="selectedProjectId" (ngModelChange)="onProjectChange()">
+        <mat-option *ngFor="let p of projects" [value]="p.id">
+          {{ p.projectCode }} — {{ p.nameEn }}
+        </mat-option>
+      </mat-select>
+      <mat-icon matSuffix>construction</mat-icon>
+    </mat-form-field>
+    <mat-button-toggle-group [(ngModel)]="verifiedFilter" class="filter-toggle">
+      <mat-button-toggle value="all">All ({{ expenditures.length }})</mat-button-toggle>
+      <mat-button-toggle value="pending">Pending ({{ pendingCount }})</mat-button-toggle>
+      <mat-button-toggle value="verified">Verified ({{ verifiedCount }})</mat-button-toggle>
+    </mat-button-toggle-group>
+  </div>
+
+  <!-- Summary bar -->
+  <div class="summary-bar fade-in" *ngIf="!loading && expenditures.length > 0">
+    <div class="sum-item">
+      <span class="sum-label">Total Entries</span>
+      <span class="sum-value">{{ filtered.length }}</span>
+    </div>
+    <div class="sum-divider"></div>
+    <div class="sum-item">
+      <span class="sum-label">Total Amount</span>
+      <span class="sum-value amount">{{ totalAmount | inr }}</span>
+    </div>
+    <div class="sum-divider"></div>
+    <div class="sum-item">
+      <span class="sum-label">Pending Verification</span>
+      <span class="sum-value warn">{{ pendingCount }}</span>
+    </div>
+    <div class="sum-divider"></div>
+    <div class="sum-item">
+      <span class="sum-label">Verified</span>
+      <span class="sum-value ok">{{ verifiedCount }}</span>
+    </div>
+  </div>
+
+  <!-- Outer layout: left side (states + table) and right side (panel) -->
+  <div class="main-layout" [class.has-panel]="panelOpen">
+
+    <!-- Left: loading / error / empty / table -->
+    <div class="left-side">
+
+      <div *ngIf="loading" class="state-container">
+        <mat-spinner diameter="48"></mat-spinner><p>Loading expenditures…</p>
+      </div>
+      <div *ngIf="!loading && error" class="state-container error-state">
+        <mat-icon>error_outline</mat-icon><p>Failed to load.</p>
+        <button mat-raised-button color="primary" (click)="loadExpenditures()">Retry</button>
+      </div>
+      <div *ngIf="!loading && !error && projects.length === 0" class="state-container">
+        <mat-icon>construction</mat-icon>
+        <p>No projects available. Create a project first.</p>
+      </div>
+      <div *ngIf="!loading && !error && projects.length > 0 && filtered.length === 0" class="state-container">
+        <mat-icon>receipt_long</mat-icon>
+        <p>No expenditures recorded. <a (click)="openCreate()">Record the first one.</a></p>
+      </div>
+
+      <!-- Table -->
+      <div *ngIf="!loading && !error && filtered.length > 0" class="table-wrapper fade-in">
+        <table mat-table [dataSource]="filtered" class="exp-table">
+
+          <ng-container matColumnDef="voucher">
+            <th mat-header-cell *matHeaderCellDef>Voucher / ID</th>
+            <td mat-cell *matCellDef="let e">
+              <div class="voucher-cell">
+                <span class="voucher-no">{{ e.voucherNumber || ('EXP-' + e.id) }}</span>
+                <span class="fy-badge">{{ e.financialYear }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="project">
+            <th mat-header-cell *matHeaderCellDef>Project</th>
+            <td mat-cell *matCellDef="let e">
+              <span class="proj-name">{{ e.projectNameEn || getProjectName(e.projectId) }}</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="contractor">
+            <th mat-header-cell *matHeaderCellDef>Contractor</th>
+            <td mat-cell *matCellDef="let e">
+              <span *ngIf="e.contractorNameEn" class="contractor-name">{{ e.contractorNameEn }}</span>
+              <span *ngIf="!e.contractorNameEn" class="muted">—</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="amount">
+            <th mat-header-cell *matHeaderCellDef>Amount</th>
+            <td mat-cell *matCellDef="let e">
+              <span class="amount-value">{{ e.amount | inr }}</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="paymentDate">
+            <th mat-header-cell *matHeaderCellDef>Date</th>
+            <td mat-cell *matCellDef="let e">
+              <span class="date-val">{{ e.paymentDate | date:'dd MMM yyyy' }}</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="mode">
+            <th mat-header-cell *matHeaderCellDef>Mode</th>
+            <td mat-cell *matCellDef="let e">
+              <span class="mode-chip">
+                <mat-icon>{{ paymentModeIcons[$any(e.paymentMode)] }}</mat-icon>
+                {{ e.paymentMode | titlecase }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let e">
+              <div class="status-cell">
+                <span class="status-chip verified-chip" *ngIf="e.isVerified">
+                  <mat-icon>check_circle</mat-icon> Verified
+                </span>
+                <span class="status-chip pending-chip" *ngIf="!e.isVerified">
+                  <mat-icon>hourglass_empty</mat-icon> Pending
+                </span>
+                <span class="verified-by" *ngIf="e.isVerified && e.verifiedByUsername">
+                  by {{ e.verifiedByUsername }}
+                </span>
+              </div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let e">
+              <span class="recorded-by" *ngIf="e.recordedByUsername">
+                <mat-icon>person</mat-icon>{{ e.recordedByUsername }}
+              </span>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"
+              class="table-row" [class.verified-row]="row.isVerified"></tr>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div *ngIf="!loading && totalPages > 1" class="pagination fade-in">
+        <button mat-icon-button [disabled]="page===0" (click)="goToPage(0)"><mat-icon>first_page</mat-icon></button>
+        <button mat-icon-button [disabled]="page===0" (click)="goToPage(page-1)"><mat-icon>chevron_left</mat-icon></button>
+        <span class="page-info">Page {{ page+1 }} of {{ totalPages }} · {{ totalElements }} records</span>
+        <button mat-icon-button [disabled]="page===totalPages-1" (click)="goToPage(page+1)"><mat-icon>chevron_right</mat-icon></button>
+        <button mat-icon-button [disabled]="page===totalPages-1" (click)="goToPage(totalPages-1)"><mat-icon>last_page</mat-icon></button>
+      </div>
+
+    </div><!-- /left-side -->
+
+    <!-- Right: form panel — always rendered when panelOpen, independent of table state -->
+    <div class="form-panel fade-in" *ngIf="panelOpen">
+      <div class="panel-header">
+        <h2>Record Expenditure</h2>
+        <button mat-icon-button (click)="closePanel()"><mat-icon>close</mat-icon></button>
+      </div>
+      <form class="panel-form" [formGroup]="form" (ngSubmit)="save()">
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Project *</mat-label>
+          <mat-select formControlName="projectId">
+            <mat-option *ngFor="let p of projects" [value]="p.id">
+              {{ p.projectCode }} — {{ p.nameEn }}
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="hasError('projectId','required')">Required</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Contractor (optional)</mat-label>
+          <mat-select formControlName="contractorId">
+            <mat-option [value]="null">None</mat-option>
+            <mat-option *ngFor="let c of contractors" [value]="c.id">
+              {{ c.nameEn }} — {{ c.registrationNumber }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <div class="two-col">
+          <mat-form-field appearance="outline">
+            <mat-label>Amount (₹) *</mat-label>
+            <input matInput type="number" formControlName="amount" min="0.01" step="0.01">
+            <mat-error *ngIf="hasError('amount','required')">Required</mat-error>
+            <mat-error *ngIf="hasError('amount','min')">Must be > 0</mat-error>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Financial Year *</mat-label>
+            <input matInput formControlName="financialYear" placeholder="2024-25">
+            <mat-error *ngIf="hasError('financialYear','required')">Required</mat-error>
+            <mat-error *ngIf="hasError('financialYear','pattern')">Format: YYYY-YY</mat-error>
+          </mat-form-field>
+        </div>
+
+        <div class="two-col">
+          <mat-form-field appearance="outline">
+            <mat-label>Payment Date *</mat-label>
+            <input matInput type="date" formControlName="paymentDate">
+            <mat-error *ngIf="hasError('paymentDate','required')">Required</mat-error>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Payment Mode *</mat-label>
+            <mat-select formControlName="paymentMode">
+              <mat-option *ngFor="let m of paymentModes" [value]="m">
+                <mat-icon>{{ paymentModeIcons[m] }}</mat-icon>
+                {{ m | titlecase }}
+              </mat-option>
+            </mat-select>
+            <mat-error *ngIf="hasError('paymentMode','required')">Required</mat-error>
+          </mat-form-field>
+        </div>
+
+        <div class="two-col">
+          <mat-form-field appearance="outline">
+            <mat-label>Voucher Number</mat-label>
+            <input matInput formControlName="voucherNumber">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Payment Reference</mat-label>
+            <input matInput formControlName="paymentReference" placeholder="UTR / Cheque no.">
+          </mat-form-field>
+        </div>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description (English)</mat-label>
+          <textarea matInput formControlName="descriptionEn" rows="2"></textarea>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description (Hindi)</mat-label>
+          <textarea matInput formControlName="descriptionHi" rows="2"></textarea>
+        </mat-form-field>
+
+        <div class="panel-actions">
+          <button mat-stroked-button type="button" (click)="closePanel()" [disabled]="saving">Cancel</button>
+          <button mat-raised-button color="primary" type="submit" [disabled]="saving">
+            <mat-spinner diameter="18" *ngIf="saving"></mat-spinner>
+            <span *ngIf="!saving">Record</span>
+          </button>
+        </div>
+      </form>
+    </div><!-- /form-panel -->
+
+  </div><!-- /main-layout -->
+
 </div>

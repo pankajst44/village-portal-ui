@@ -1,7 +1,284 @@
 <div class="page-container">
-  <div class="page-header">
-    <h1>Fund Management</h1>
+
+  <!-- Header -->
+  <div class="page-header fade-in">
+    <div class="header-text">
+      <h1>Fund Management</h1>
+      <p class="subtitle">Create and manage government fund schemes</p>
+    </div>
+    <button mat-raised-button color="primary" (click)="openCreate()">
+      <mat-icon>add</mat-icon> New Fund
+    </button>
   </div>
-  <!-- TODO: Implement Fund Management view -->
-  <p>{{ 'common.loading' | translate }}</p>
+
+  <!-- Summary chips -->
+  <div class="summary-row fade-in" *ngIf="!loading && funds.length > 0">
+    <span class="sum-chip total">{{ funds.length }} Total</span>
+    <span class="sum-chip active">{{ countByStatus('ACTIVE') }} Active</span>
+    <span class="sum-chip pending">{{ countByStatus('PENDING') }} Pending</span>
+    <span class="sum-chip closed">{{ countByStatus('CLOSED') }} Closed</span>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-row fade-in">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Search scheme name, reference, FY…</mat-label>
+      <input matInput [(ngModel)]="searchTerm">
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="status-field">
+      <mat-label>Status</mat-label>
+      <mat-select [(ngModel)]="statusFilter">
+        <mat-option value="">All</mat-option>
+        <mat-option *ngFor="let s of fundStatuses" [value]="s">{{ s }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="state-container">
+    <mat-spinner diameter="48"></mat-spinner><p>Loading funds…</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="!loading && error" class="state-container error-state">
+    <mat-icon>error_outline</mat-icon><p>Failed to load funds.</p>
+    <button mat-raised-button color="primary" (click)="loadFunds()">Retry</button>
+  </div>
+
+  <!-- Empty -->
+  <div *ngIf="!loading && !error && filtered.length === 0" class="state-container">
+    <mat-icon>account_balance</mat-icon>
+    <p>No funds found. <a (click)="openCreate()">Create the first one.</a></p>
+  </div>
+
+  <!-- Main layout -->
+  <div *ngIf="!loading && !error && filtered.length > 0"
+       class="main-layout" [class.has-panel]="panelOpen">
+
+    <!-- Table -->
+    <div class="table-wrapper fade-in">
+      <table mat-table [dataSource]="filtered" class="funds-table">
+
+        <!-- Scheme Name -->
+        <ng-container matColumnDef="scheme">
+          <th mat-header-cell *matHeaderCellDef>Scheme</th>
+          <td mat-cell *matCellDef="let f">
+            <div class="scheme-cell">
+              <span class="scheme-name">{{ f.schemeNameEn }}</span>
+              <span class="scheme-hi" *ngIf="f.schemeNameHi">{{ f.schemeNameHi }}</span>
+              <span class="ref-num" *ngIf="f.referenceNumber">Ref: {{ f.referenceNumber }}</span>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Source -->
+        <ng-container matColumnDef="source">
+          <th mat-header-cell *matHeaderCellDef>Source</th>
+          <td mat-cell *matCellDef="let f">
+            <span class="source-chip">{{ sourceLabels[f.fundSource] }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Financial Year -->
+        <ng-container matColumnDef="fy">
+          <th mat-header-cell *matHeaderCellDef>FY</th>
+          <td mat-cell *matCellDef="let f">
+            <span class="fy-chip">{{ f.financialYear }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Total Amount -->
+        <ng-container matColumnDef="totalAmount">
+          <th mat-header-cell *matHeaderCellDef>Total Amount</th>
+          <td mat-cell *matCellDef="let f" class="amount">{{ f.totalAmount | inr }}</td>
+        </ng-container>
+
+        <!-- Amount Received -->
+        <ng-container matColumnDef="amountReceived">
+          <th mat-header-cell *matHeaderCellDef>Received</th>
+          <td mat-cell *matCellDef="let f">
+            <div class="recv-cell">
+              <span class="recv-amount">{{ f.amountReceived | inr }}</span>
+              <div class="recv-bar-bg" *ngIf="f.totalAmount > 0">
+                <div class="recv-bar-fill"
+                     [style.width.%]="(f.amountReceived / f.totalAmount) * 100"></div>
+              </div>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Status -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let f">
+            <span class="status-chip"
+                  [style.background]="getStatusColor(f.status) + '18'"
+                  [style.color]="getStatusColor(f.status)">
+              {{ f.status }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Actions -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let f">
+            <button mat-icon-button matTooltip="Edit" (click)="openEdit(f); $event.stopPropagation()">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button matTooltip="Delete" color="warn"
+                    (click)="promptDelete(f); $event.stopPropagation()">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"
+            class="table-row" (click)="openEdit(row)"></tr>
+      </table>
+    </div>
+
+    <!-- Slide-out form panel -->
+    <div class="form-panel" *ngIf="panelOpen">
+      <div class="panel-header">
+        <h2>{{ editingFund ? 'Edit Fund' : 'New Fund' }}</h2>
+        <button mat-icon-button (click)="closePanel()"><mat-icon>close</mat-icon></button>
+      </div>
+
+      <form class="panel-form" [formGroup]="form" (ngSubmit)="save()">
+
+        <!-- Scheme Name EN -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Scheme Name (English) *</mat-label>
+          <input matInput formControlName="schemeNameEn" placeholder="e.g. Pradhan Mantri Gram Sadak Yojana">
+          <mat-error *ngIf="hasError('schemeNameEn', 'required')">Required</mat-error>
+          <mat-error *ngIf="hasError('schemeNameEn', 'maxlength')">Max 200 characters</mat-error>
+        </mat-form-field>
+
+        <!-- Scheme Name HI -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Scheme Name (Hindi)</mat-label>
+          <input matInput formControlName="schemeNameHi">
+        </mat-form-field>
+
+        <!-- Source + FY -->
+        <div class="two-col">
+          <mat-form-field appearance="outline">
+            <mat-label>Fund Source *</mat-label>
+            <mat-select formControlName="fundSource">
+              <mat-option *ngFor="let s of fundSources" [value]="s">{{ sourceLabels[s] }}</mat-option>
+            </mat-select>
+            <mat-error *ngIf="hasError('fundSource', 'required')">Required</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Financial Year *</mat-label>
+            <input matInput formControlName="financialYear" placeholder="2024-25">
+            <mat-hint>Format: YYYY-YY</mat-hint>
+            <mat-error *ngIf="hasError('financialYear', 'required')">Required</mat-error>
+            <mat-error *ngIf="hasError('financialYear', 'pattern')">Use format 2024-25</mat-error>
+          </mat-form-field>
+        </div>
+
+        <!-- Total Amount + Received -->
+        <div class="two-col">
+          <mat-form-field appearance="outline">
+            <mat-label>Total Amount (₹) *</mat-label>
+            <input matInput type="number" formControlName="totalAmount" min="0.01" step="0.01">
+            <mat-error *ngIf="hasError('totalAmount', 'required')">Required</mat-error>
+            <mat-error *ngIf="hasError('totalAmount', 'min')">Must be greater than 0</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Amount Received (₹)</mat-label>
+            <input matInput type="number" formControlName="amountReceived" min="0" step="0.01">
+            <mat-error *ngIf="hasError('amountReceived', 'min')">Cannot be negative</mat-error>
+          </mat-form-field>
+        </div>
+
+        <!-- Release Date + Reference -->
+        <div class="two-col">
+          <mat-form-field appearance="outline">
+            <mat-label>Release Date</mat-label>
+            <input matInput type="date" formControlName="releaseDate">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Reference Number</mat-label>
+            <input matInput formControlName="referenceNumber" placeholder="e.g. GOI/2024/001">
+            <mat-error *ngIf="hasError('referenceNumber', 'maxlength')">Max 100 characters</mat-error>
+          </mat-form-field>
+        </div>
+
+        <!-- Status -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Status *</mat-label>
+          <mat-select formControlName="status">
+            <mat-option *ngFor="let s of fundStatuses" [value]="s">{{ s }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- Description EN -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description (English)</mat-label>
+          <textarea matInput formControlName="descriptionEn" rows="3"
+                    placeholder="Brief description of the fund scheme…"></textarea>
+        </mat-form-field>
+
+        <!-- Description HI -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description (Hindi)</mat-label>
+          <textarea matInput formControlName="descriptionHi" rows="2"></textarea>
+        </mat-form-field>
+
+        <!-- Actions -->
+        <div class="panel-actions">
+          <button mat-stroked-button type="button" (click)="closePanel()" [disabled]="saving">
+            Cancel
+          </button>
+          <button mat-raised-button color="primary" type="submit" [disabled]="saving">
+            <mat-spinner diameter="18" *ngIf="saving"></mat-spinner>
+            <span *ngIf="!saving">{{ editingFund ? 'Update Fund' : 'Create Fund' }}</span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div *ngIf="!loading && totalPages > 1" class="pagination fade-in">
+    <button mat-icon-button [disabled]="page === 0" (click)="goToPage(0)">
+      <mat-icon>first_page</mat-icon>
+    </button>
+    <button mat-icon-button [disabled]="page === 0" (click)="goToPage(page - 1)">
+      <mat-icon>chevron_left</mat-icon>
+    </button>
+    <span class="page-info">Page {{ page + 1 }} of {{ totalPages }}</span>
+    <button mat-icon-button [disabled]="page === totalPages - 1" (click)="goToPage(page + 1)">
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+    <button mat-icon-button [disabled]="page === totalPages - 1" (click)="goToPage(totalPages - 1)">
+      <mat-icon>last_page</mat-icon>
+    </button>
+  </div>
+
+</div>
+
+<!-- Delete confirmation dialog -->
+<div class="overlay" *ngIf="confirmDelete" (click)="cancelDelete()">
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <mat-icon color="warn">warning</mat-icon>
+      <h3>Delete Fund</h3>
+    </div>
+    <p>Are you sure you want to delete <strong>{{ deleteTarget?.schemeNameEn }}</strong>?
+      This will fail if any project is linked to this fund.</p>
+    <div class="dialog-actions">
+      <button mat-stroked-button (click)="cancelDelete()">Cancel</button>
+      <button mat-raised-button color="warn" (click)="confirmDeletion()">Delete</button>
+    </div>
+  </div>
 </div>

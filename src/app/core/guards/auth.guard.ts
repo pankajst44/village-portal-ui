@@ -1,7 +1,7 @@
 import { Injectable }  from '@angular/core';
 import {
-  CanActivate, ActivatedRouteSnapshot,
-  RouterStateSnapshot, Router
+  CanActivate, CanMatch, ActivatedRouteSnapshot,
+  RouterStateSnapshot, Router, Route, UrlSegment
 } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
@@ -45,7 +45,6 @@ export class RoleGuard implements CanActivate {
       return true;
     }
 
-    // Authenticated but wrong role — go to their own dashboard
     this.router.navigate(['/dashboard']);
     return false;
   }
@@ -65,5 +64,38 @@ export class GuestGuard implements CanActivate {
     }
     this.router.navigate(['/dashboard']);
     return false;
+  }
+}
+
+/**
+ * ShellMatchGuard — canMatch guard on the authenticated shell route block.
+ * The shell route (path:'') only activates when the user IS logged in.
+ * This makes Angular pick the shell route over the public route for
+ * authenticated users, so /dashboard renders inside the shell with
+ * header + sidebar + logout.
+ */
+@Injectable({ providedIn: 'root' })
+export class ShellMatchGuard implements CanMatch {
+
+  constructor(private auth: AuthService) {}
+
+  canMatch(route: Route, segments: UrlSegment[]): boolean {
+    return this.auth.isLoggedInSnapshot();
+  }
+}
+
+/**
+ * GuestMatchGuard — canMatch guard on the bare public route block.
+ * Prevents the shell-less PublicModule from being activated when the
+ * user IS logged in — ensuring /projects, /dashboard etc. always render
+ * inside the shell with header + sidebar when authenticated.
+ */
+@Injectable({ providedIn: 'root' })
+export class GuestMatchGuard implements CanMatch {
+
+  constructor(private auth: AuthService) {}
+
+  canMatch(route: Route, segments: UrlSegment[]): boolean {
+    return !this.auth.isLoggedInSnapshot();
   }
 }

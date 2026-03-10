@@ -1,7 +1,343 @@
 <div class="page-container">
-  <div class="page-header">
-    <h1>Project Management</h1>
+
+  <!-- Header -->
+  <div class="page-header fade-in">
+    <div class="header-text">
+      <h1>Project Management</h1>
+      <p class="subtitle">Create and manage village development projects</p>
+    </div>
+    <button mat-raised-button color="primary" (click)="openCreate()">
+      <mat-icon>add</mat-icon> New Project
+    </button>
   </div>
-  <!-- TODO: Implement Project Management view -->
-  <p>{{ 'common.loading' | translate }}</p>
+
+  <!-- Summary chips -->
+  <div class="summary-row fade-in" *ngIf="!loading && projects.length > 0">
+    <span class="sum-chip total">{{ projects.length }} Total</span>
+    <span class="sum-chip planned">{{ countByStatus('PLANNED') }} Planned</span>
+    <span class="sum-chip ongoing">{{ countByStatus('ONGOING') }} Ongoing</span>
+    <span class="sum-chip completed">{{ countByStatus('COMPLETED') }} Completed</span>
+    <span class="sum-chip hold" *ngIf="countByStatus('ON_HOLD') > 0">{{ countByStatus('ON_HOLD') }} On Hold</span>
+    <span class="sum-chip cancelled" *ngIf="countByStatus('CANCELLED') > 0">{{ countByStatus('CANCELLED') }} Cancelled</span>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-row fade-in">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Search name, code, location…</mat-label>
+      <input matInput [(ngModel)]="searchTerm">
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Type</mat-label>
+      <mat-select [(ngModel)]="typeFilter">
+        <mat-option value="">All Types</mat-option>
+        <mat-option *ngFor="let t of projectTypes" [value]="t">
+          <mat-icon>{{ typeIcons[t] }}</mat-icon> {{ t }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Status</mat-label>
+      <mat-select [(ngModel)]="statusFilter">
+        <mat-option value="">All Statuses</mat-option>
+        <mat-option *ngFor="let s of projectStatuses" [value]="s">{{ s }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="state-container">
+    <mat-spinner diameter="48"></mat-spinner><p>Loading projects…</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="!loading && error" class="state-container error-state">
+    <mat-icon>error_outline</mat-icon><p>Failed to load projects.</p>
+    <button mat-raised-button color="primary" (click)="loadProjects()">Retry</button>
+  </div>
+
+  <!-- Empty -->
+  <div *ngIf="!loading && !error && filtered.length === 0" class="state-container">
+    <mat-icon>construction</mat-icon>
+    <p>No projects found. <a (click)="openCreate()">Create the first one.</a></p>
+  </div>
+
+  <!-- Main layout: table + panel -->
+  <div *ngIf="!loading && !error && filtered.length > 0"
+       class="main-layout" [class.has-panel]="panelOpen">
+
+    <!-- Table -->
+    <div class="table-wrapper fade-in">
+      <table mat-table [dataSource]="filtered" class="projects-table">
+
+        <!-- Project -->
+        <ng-container matColumnDef="project">
+          <th mat-header-cell *matHeaderCellDef>Project</th>
+          <td mat-cell *matCellDef="let p">
+            <div class="proj-cell">
+              <span class="proj-code">{{ p.projectCode }}</span>
+              <span class="proj-name">{{ p.nameEn }}</span>
+              <span class="proj-location" *ngIf="p.locationEn">
+                <mat-icon>place</mat-icon>{{ p.locationEn }}
+              </span>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Type -->
+        <ng-container matColumnDef="type">
+          <th mat-header-cell *matHeaderCellDef>Type</th>
+          <td mat-cell *matCellDef="let p">
+            <span class="type-chip">
+              <mat-icon>{{ typeIcons[$any(p.projectType)] }}</mat-icon>
+              {{ p.projectType }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Fund -->
+        <ng-container matColumnDef="fund">
+          <th mat-header-cell *matHeaderCellDef>Fund</th>
+          <td mat-cell *matCellDef="let p">
+            <span class="fund-name" *ngIf="p.fundId">{{ getFundName(p.fundId) }}</span>
+            <span class="muted" *ngIf="!p.fundId">—</span>
+          </td>
+        </ng-container>
+
+        <!-- Budget -->
+        <ng-container matColumnDef="budget">
+          <th mat-header-cell *matHeaderCellDef>Budget</th>
+          <td mat-cell *matCellDef="let p">
+            <div class="budget-cell">
+              <span class="budget-alloc">{{ p.allocatedBudget | inr }}</span>
+              <span class="budget-spent">Spent: {{ p.totalSpent | inr }}</span>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Progress -->
+        <ng-container matColumnDef="progress">
+          <th mat-header-cell *matHeaderCellDef>Progress</th>
+          <td mat-cell *matCellDef="let p">
+            <div class="progress-cell">
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill"
+                     [style.width.%]="p.progressPercent"
+                     [style.background]="statusColors[$any(p.status)]">
+                </div>
+              </div>
+              <span class="progress-pct">{{ p.progressPercent }}%</span>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Status -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let p">
+            <span class="status-chip"
+                  [style.background]="statusColors[$any(p.status)] + '18'"
+                  [style.color]="statusColors[$any(p.status)]">
+              {{ p.status }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Officer -->
+        <ng-container matColumnDef="officer">
+          <th mat-header-cell *matHeaderCellDef>Officer</th>
+          <td mat-cell *matCellDef="let p">
+            <span class="officer-name">{{ p.assignedOfficerName || '—' }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Actions -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let p">
+            <button mat-icon-button matTooltip="Edit"
+                    (click)="openEdit(p); $event.stopPropagation()">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button matTooltip="Delete" color="warn"
+                    (click)="promptDelete(p); $event.stopPropagation()">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"
+            class="table-row" (click)="openEdit(row)"></tr>
+      </table>
+    </div>
+
+    <!-- Slide-out form panel -->
+    <div class="form-panel" *ngIf="panelOpen">
+      <div class="panel-header">
+        <h2>{{ editingProject ? 'Edit Project' : 'New Project' }}</h2>
+        <button mat-icon-button (click)="closePanel()"><mat-icon>close</mat-icon></button>
+      </div>
+
+      <form class="panel-form" [formGroup]="form" (ngSubmit)="save()">
+
+        <!-- Project Code -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Project Code *</mat-label>
+          <input matInput formControlName="projectCode" placeholder="e.g. ROAD-VDP-001"
+                 style="text-transform:uppercase">
+          <mat-hint>Uppercase letters, digits and hyphens only</mat-hint>
+          <mat-error *ngIf="hasError('projectCode','required')">Required</mat-error>
+          <mat-error *ngIf="hasError('projectCode','pattern')">Only A-Z, 0-9, hyphen allowed</mat-error>
+          <mat-error *ngIf="hasError('projectCode','maxlength')">Max 30 characters</mat-error>
+        </mat-form-field>
+
+        <!-- Name EN + HI -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Project Name (English) *</mat-label>
+          <input matInput formControlName="nameEn">
+          <mat-error *ngIf="hasError('nameEn','required')">Required</mat-error>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Project Name (Hindi)</mat-label>
+          <input matInput formControlName="nameHi">
+        </mat-form-field>
+
+        <!-- Type + Status -->
+        <div class="two-col">
+          <mat-form-field appearance="outline">
+            <mat-label>Project Type *</mat-label>
+            <mat-select formControlName="projectType">
+              <mat-option *ngFor="let t of projectTypes" [value]="t">
+                <mat-icon>{{ typeIcons[t] }}</mat-icon> {{ t }}
+              </mat-option>
+            </mat-select>
+            <mat-error *ngIf="hasError('projectType','required')">Required</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Status *</mat-label>
+            <mat-select formControlName="status">
+              <mat-option *ngFor="let s of projectStatuses" [value]="s">{{ s }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <!-- Fund + Officer -->
+        <div class="two-col">
+          <mat-form-field appearance="outline">
+            <mat-label>Fund Scheme</mat-label>
+            <mat-select formControlName="fundId">
+              <mat-option [value]="null">None</mat-option>
+              <mat-option *ngFor="let f of funds" [value]="f.id">
+                {{ f.schemeNameEn }} ({{ f.financialYear }})
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Assigned Officer</mat-label>
+            <mat-select formControlName="assignedOfficerId">
+              <mat-option [value]="null">None</mat-option>
+              <mat-option *ngFor="let u of officers" [value]="u.id">{{ u.fullName }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <!-- Budget + Progress -->
+        <div class="two-col">
+          <mat-form-field appearance="outline">
+            <mat-label>Allocated Budget (₹) *</mat-label>
+            <input matInput type="number" formControlName="allocatedBudget" min="0" step="0.01">
+            <mat-error *ngIf="hasError('allocatedBudget','required')">Required</mat-error>
+            <mat-error *ngIf="hasError('allocatedBudget','min')">Cannot be negative</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Progress (%)</mat-label>
+            <input matInput type="number" formControlName="progressPercent" min="0" max="100">
+            <mat-error *ngIf="hasError('progressPercent','min') || hasError('progressPercent','max')">0–100 only</mat-error>
+          </mat-form-field>
+        </div>
+
+        <!-- Dates -->
+        <div class="two-col">
+          <mat-form-field appearance="outline">
+            <mat-label>Start Date</mat-label>
+            <input matInput type="date" formControlName="startDate">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Expected End Date</mat-label>
+            <input matInput type="date" formControlName="expectedEndDate">
+          </mat-form-field>
+        </div>
+
+        <!-- Location EN + HI -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Location (English)</mat-label>
+          <input matInput formControlName="locationEn" placeholder="e.g. Village Rampur, Block Sadar">
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Location (Hindi)</mat-label>
+          <input matInput formControlName="locationHi">
+        </mat-form-field>
+
+        <!-- Description EN -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description (English)</mat-label>
+          <textarea matInput formControlName="descriptionEn" rows="3"></textarea>
+        </mat-form-field>
+
+        <!-- Description HI -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description (Hindi)</mat-label>
+          <textarea matInput formControlName="descriptionHi" rows="2"></textarea>
+        </mat-form-field>
+
+        <!-- Public Visible toggle -->
+        <div class="toggle-row">
+          <mat-slide-toggle formControlName="isPublicVisible" color="primary">
+            Visible on Public Portal
+          </mat-slide-toggle>
+        </div>
+
+        <!-- Actions -->
+        <div class="panel-actions">
+          <button mat-stroked-button type="button" (click)="closePanel()" [disabled]="saving">Cancel</button>
+          <button mat-raised-button color="primary" type="submit" [disabled]="saving">
+            <mat-spinner diameter="18" *ngIf="saving"></mat-spinner>
+            <span *ngIf="!saving">{{ editingProject ? 'Update Project' : 'Create Project' }}</span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div *ngIf="!loading && totalPages > 1" class="pagination fade-in">
+    <button mat-icon-button [disabled]="page === 0" (click)="goToPage(0)"><mat-icon>first_page</mat-icon></button>
+    <button mat-icon-button [disabled]="page === 0" (click)="goToPage(page - 1)"><mat-icon>chevron_left</mat-icon></button>
+    <span class="page-info">Page {{ page + 1 }} of {{ totalPages }} · {{ totalElements }} projects</span>
+    <button mat-icon-button [disabled]="page === totalPages-1" (click)="goToPage(page + 1)"><mat-icon>chevron_right</mat-icon></button>
+    <button mat-icon-button [disabled]="page === totalPages-1" (click)="goToPage(totalPages - 1)"><mat-icon>last_page</mat-icon></button>
+  </div>
+
+</div>
+
+<!-- Delete confirmation -->
+<div class="overlay" *ngIf="confirmDelete" (click)="cancelDelete()">
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <mat-icon color="warn">warning</mat-icon>
+      <h3>Delete Project</h3>
+    </div>
+    <p>Delete <strong>{{ deleteTarget?.projectCode }} — {{ deleteTarget?.nameEn }}</strong>?
+       This will fail if the project has linked expenditures or documents.</p>
+    <div class="dialog-actions">
+      <button mat-stroked-button (click)="cancelDelete()">Cancel</button>
+      <button mat-raised-button color="warn" (click)="confirmDeletion()">Delete</button>
+    </div>
+  </div>
 </div>

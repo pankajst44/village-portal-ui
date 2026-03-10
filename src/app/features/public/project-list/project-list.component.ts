@@ -18,7 +18,7 @@ export class ProjectListComponent implements OnInit {
   currentLang    = 'en';
 
   page           = 0;
-  pageSize       = 10;
+  pageSize       = 12;
   totalElements  = 0;
   totalPages     = 0;
 
@@ -61,23 +61,25 @@ export class ProjectListComponent implements OnInit {
   applyFilters(): void { this.page = 0; this.load(); }
 
   resetFilters(): void {
-    this.selectedStatus = '';
-    this.selectedType   = '';
-    this.searchTerm     = '';
-    this.page           = 0;
-    this.load();
+    this.selectedStatus = ''; this.selectedType = '';
+    this.searchTerm = ''; this.page = 0; this.load();
   }
 
   goToPage(p: number): void {
     if (p < 0 || p >= this.totalPages) return;
-    this.page = p;
-    this.load();
+    this.page = p; this.load();
   }
 
   openDetail(id: number): void { this.router.navigate(['/projects', id]); }
 
   label(en?: string, hi?: string): string {
     return (this.currentLang === 'hi' && hi) ? hi : (en ?? '');
+  }
+
+  getProgressClass(pct: number): string {
+    if (pct >= 75) return 'high';
+    if (pct >= 40) return 'medium';
+    return 'low';
   }
 
   get filteredProjects(): Project[] {
@@ -91,13 +93,8 @@ export class ProjectListComponent implements OnInit {
     );
   }
 
-  getProgressClass(pct: number): string {
-    if (pct >= 75) return 'high';
-    if (pct >= 40) return 'medium';
-    return 'low';
-  }
-
   get pages(): number[] {
-    return Array.from({ length: this.totalPages }, (_, i) => i);
+    const total = Math.min(this.totalPages, 10);
+    return Array.from({ length: total }, (_, i) => i);
   }
 }

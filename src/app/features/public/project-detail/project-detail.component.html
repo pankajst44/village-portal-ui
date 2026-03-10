@@ -1,134 +1,331 @@
-<div class="page-container">
+<div class="pd-page">
 
   <!-- Loading -->
-  <div *ngIf="loading" class="state-container">
-    <mat-spinner diameter="48"></mat-spinner>
-    <p>{{ 'common.loading' | translate }}</p>
+  <div *ngIf="loading" class="pd-state">
+    <mat-spinner diameter="44"></mat-spinner>
+    <p>Loading project…</p>
   </div>
 
   <!-- Error -->
-  <div *ngIf="!loading && error" class="state-container error-state">
+  <div *ngIf="!loading && error" class="pd-state error">
     <mat-icon>error_outline</mat-icon>
-    <p>{{ 'common.error' | translate }}</p>
-    <button mat-raised-button color="primary" (click)="goBack()">
-      {{ 'common.back' | translate }}
-    </button>
+    <p>Could not load this project.</p>
+    <button mat-raised-button color="primary" (click)="goBack()">← Back to Projects</button>
   </div>
 
   <!-- Content -->
-  <ng-container *ngIf="!loading && !error && project">
+  <ng-container *ngIf="!loading && !error && project as p">
 
-    <!-- Back + header -->
-    <div class="page-header fade-in">
-      <button mat-icon-button (click)="goBack()" class="back-btn">
-        <mat-icon>arrow_back</mat-icon>
-      </button>
-      <div class="header-text">
-        <div class="header-meta">
-          <span class="project-code">{{ project.projectCode }}</span>
-          <vp-status-badge [status]="project.status"
-            [label]="'project.statuses.' + project.status | translate">
-          </vp-status-badge>
-          <span class="type-chip">
-            {{ 'project.types.' + project.projectType | translate }}
-          </span>
+    <!-- ── Hero ───────────────────────────────────────────── -->
+    <div class="pd-hero">
+      <div class="pd-hero-inner">
+
+        <button mat-icon-button class="pd-back-btn" (click)="goBack()" title="Back">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+
+        <div class="pd-hero-body">
+          <div class="pd-badges">
+            <span class="pd-code">{{ p.projectCode }}</span>
+            <span class="pd-type-chip">
+              <mat-icon>category</mat-icon>
+              {{ 'project.types.' + p.projectType | translate }}
+            </span>
+            <span class="pd-status-chip pd-status-{{ p.status.toLowerCase().replace('_','-') }}">
+              {{ 'project.statuses.' + p.status | translate }}
+            </span>
+          </div>
+
+          <h1 class="pd-title">{{ label(p.nameEn, p.nameHi) }}</h1>
+
+          <div class="pd-location" *ngIf="p.locationEn">
+            <mat-icon>location_on</mat-icon>
+            {{ label(p.locationEn, p.locationHi) }}
+          </div>
         </div>
-        <h1>{{ label(project.nameEn, project.nameHi) }}</h1>
-        <p class="location" *ngIf="project.locationEn">
-          <mat-icon>location_on</mat-icon>
-          {{ label(project.locationEn, project.locationHi) }}
-        </p>
+
+        <!-- Progress ring -->
+        <div class="pd-ring-wrap">
+          <svg class="pd-ring" viewBox="0 0 80 80">
+            <circle class="pd-ring-bg" cx="40" cy="40" r="32"/>
+            <circle class="pd-ring-fill pd-ring-{{ getProgressClass(p.progressPercent) }}"
+                    cx="40" cy="40" r="32"
+                    [style.stroke-dasharray]="201"
+                    [style.stroke-dashoffset]="201 - (201 * p.progressPercent / 100)"/>
+          </svg>
+          <div class="pd-ring-label">
+            <span class="pd-ring-pct">{{ p.progressPercent }}%</span>
+            <span class="pd-ring-sub">done</span>
+          </div>
+        </div>
+
       </div>
     </div>
 
-    <!-- Progress banner -->
-    <div class="progress-banner fade-in">
-      <div class="progress-info">
-        <span class="progress-label">{{ 'project.progress' | translate }}</span>
-        <span class="progress-value">{{ project.progressPercent }}%</span>
+    <!-- ── Budget strip ───────────────────────────────────── -->
+    <div class="pd-budget-strip">
+      <div class="pd-budget-item">
+        <span class="pd-budget-label">Allocated</span>
+        <span class="pd-budget-value allocated">{{ p.allocatedBudget | inr }}</span>
       </div>
-      <div class="progress-track">
-        <div class="progress-fill" [ngClass]="getProgressClass(project.progressPercent)"
-             [style.width.%]="project.progressPercent"></div>
+      <div class="pd-budget-divider"></div>
+      <div class="pd-budget-item">
+        <span class="pd-budget-label">Spent</span>
+        <span class="pd-budget-value spent">{{ p.totalSpent | inr }}</span>
+      </div>
+      <div class="pd-budget-divider"></div>
+      <div class="pd-budget-item">
+        <span class="pd-budget-label">Remaining</span>
+        <span class="pd-budget-value remaining">{{ p.remainingBudget | inr }}</span>
+      </div>
+      <div class="pd-budget-bar-wrap">
+        <div class="pd-budget-bar-track">
+          <div class="pd-budget-bar-fill" [style.width.%]="spentPct"
+               [class]="'fill-' + getProgressClass(spentPct)"></div>
+        </div>
+        <span class="pd-budget-bar-pct">{{ spentPct.toFixed(1) }}% utilized</span>
       </div>
     </div>
 
-    <!-- Details grid -->
-    <div class="details-grid fade-in">
+    <!-- ── Tab panel ──────────────────────────────────────── -->
+    <mat-tab-group [(selectedIndex)]="activeTab" class="pd-tabs" animationDuration="200ms">
 
-      <!-- Budget card -->
-      <mat-card class="detail-card budget-card">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>account_balance_wallet</mat-icon>
-          <mat-card-title>Budget Overview</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="budget-row">
-            <div class="budget-item">
-              <span class="budget-item-label">{{ 'project.budget' | translate }}</span>
-              <span class="budget-item-value allocated">{{ project.allocatedBudget | inr }}</span>
+      <!-- Tab 1: Overview -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>info</mat-icon>&nbsp;Overview
+        </ng-template>
+
+        <div class="pd-tab-content pd-overview">
+
+          <!-- Description -->
+          <div class="pd-card" *ngIf="p.descriptionEn || p.descriptionHi">
+            <div class="pd-card-title">
+              <mat-icon>subject</mat-icon> Description
             </div>
-            <div class="budget-item">
-              <span class="budget-item-label">{{ 'project.spent' | translate }}</span>
-              <span class="budget-item-value spent">{{ project.totalSpent | inr }}</span>
+            <p class="pd-description">{{ label(p.descriptionEn, p.descriptionHi) }}</p>
+          </div>
+
+          <!-- Key info grid -->
+          <div class="pd-card">
+            <div class="pd-card-title">
+              <mat-icon>list_alt</mat-icon> Project Information
             </div>
-            <div class="budget-item">
-              <span class="budget-item-label">{{ 'project.remaining' | translate }}</span>
-              <span class="budget-item-value remaining">{{ project.remainingBudget | inr }}</span>
+            <div class="pd-info-grid">
+              <div class="pd-info-item" *ngIf="p.fundSchemeNameEn">
+                <span class="pd-info-label">Fund Scheme</span>
+                <span class="pd-info-value">{{ label(p.fundSchemeNameEn, p.fundSchemeNameHi) }}</span>
+              </div>
+              <div class="pd-info-item" *ngIf="p.assignedOfficerName">
+                <span class="pd-info-label">Project Officer</span>
+                <span class="pd-info-value">{{ p.assignedOfficerName }}</span>
+              </div>
+              <div class="pd-info-item" *ngIf="p.startDate">
+                <span class="pd-info-label">Start Date</span>
+                <span class="pd-info-value">{{ p.startDate | date:'d MMM yyyy' }}</span>
+              </div>
+              <div class="pd-info-item" *ngIf="p.expectedEndDate">
+                <span class="pd-info-label">Expected End</span>
+                <span class="pd-info-value">{{ p.expectedEndDate | date:'d MMM yyyy' }}</span>
+              </div>
+              <div class="pd-info-item" *ngIf="p.actualEndDate">
+                <span class="pd-info-label">Completed On</span>
+                <span class="pd-info-value highlight">{{ p.actualEndDate | date:'d MMM yyyy' }}</span>
+              </div>
+              <div class="pd-info-item">
+                <span class="pd-info-label">Last Updated</span>
+                <span class="pd-info-value">{{ p.updatedAt | date:'d MMM yyyy' }}</span>
+              </div>
             </div>
           </div>
-          <vp-budget-bar [spent]="project.totalSpent" [allocated]="project.allocatedBudget">
-          </vp-budget-bar>
-        </mat-card-content>
-      </mat-card>
 
-      <!-- Info card -->
-      <mat-card class="detail-card info-card">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>info</mat-icon>
-          <mat-card-title>{{ 'project.description' | translate }}</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <p class="description" *ngIf="project.descriptionEn || project.descriptionHi; else noDesc">
-            {{ label(project.descriptionEn, project.descriptionHi) }}
-          </p>
-          <ng-template #noDesc>
-            <p class="no-data">{{ 'common.noData' | translate }}</p>
-          </ng-template>
+        </div>
+      </mat-tab>
 
-          <mat-divider class="divider"></mat-divider>
+      <!-- Tab 2: Documents -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>folder</mat-icon>&nbsp;Documents
+          <span class="pd-tab-badge" *ngIf="documents.length">{{ documents.length }}</span>
+        </ng-template>
 
-          <div class="info-grid">
-            <div class="info-item" *ngIf="project.fundSchemeNameEn">
-              <span class="info-label">{{ 'project.fund' | translate }}</span>
-              <span class="info-value">{{ label(project.fundSchemeNameEn, project.fundSchemeNameHi) }}</span>
+        <div class="pd-tab-content">
+
+          <div *ngIf="documents.length === 0" class="pd-empty">
+            <mat-icon>folder_open</mat-icon>
+            <p>No documents uploaded for this project.</p>
+          </div>
+
+          <div *ngIf="documents.length > 0" class="pd-docs-layout"
+               [class.has-preview]="previewDoc">
+
+            <!-- Document list -->
+            <div class="pd-doc-list">
+              <div class="pd-doc-row" *ngFor="let doc of documents"
+                   [class.active]="previewDoc?.id === doc.id"
+                   (click)="openPreview(doc)">
+                <mat-icon class="pd-doc-icon">{{ docIcon(doc) }}</mat-icon>
+                <div class="pd-doc-info">
+                  <span class="pd-doc-name">{{ doc.titleEn || doc.originalFileName }}</span>
+                  <span class="pd-doc-meta">
+                    {{ doc.documentType.replace('_',' ') }}
+                    <ng-container *ngIf="doc.fileSizeKb"> · {{ formatSize(doc.fileSizeKb) }}</ng-container>
+                    <ng-container *ngIf="doc.uploadedAt"> · {{ doc.uploadedAt | date:'d MMM yyyy' }}</ng-container>
+                  </span>
+                </div>
+                <div class="pd-doc-actions" (click)="$event.stopPropagation()">
+                  <button mat-icon-button title="Preview" *ngIf="canPreview(doc)"
+                          (click)="openPreview(doc)">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                  <button mat-icon-button title="Download" (click)="download(doc)">
+                    <mat-icon>download</mat-icon>
+                  </button>
+                </div>
+              </div>
             </div>
-            <div class="info-item" *ngIf="project.assignedOfficerName">
-              <span class="info-label">{{ 'project.officer' | translate }}</span>
-              <span class="info-value">{{ project.assignedOfficerName }}</span>
+
+            <!-- Preview pane -->
+            <div class="pd-preview-pane" *ngIf="previewDoc as pd">
+              <div class="pd-preview-header">
+                <span>{{ pd.titleEn || pd.originalFileName }}</span>
+                <button mat-icon-button (click)="closePreview()">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+              <div class="pd-preview-body">
+                <mat-spinner *ngIf="previewLoading" diameter="36"></mat-spinner>
+                <img *ngIf="!previewLoading && isImage(pd) && previewUrl"
+                     [src]="previewUrl" class="pd-preview-img" [alt]="pd.originalFileName">
+                <iframe *ngIf="!previewLoading && isPdf(pd) && previewUrl"
+                        [src]="previewUrl" class="pd-preview-iframe" title="PDF preview"></iframe>
+              </div>
             </div>
-            <div class="info-item" *ngIf="project.startDate">
-              <span class="info-label">{{ 'project.startDate' | translate }}</span>
-              <span class="info-value">{{ project.startDate | date:'mediumDate' }}</span>
-            </div>
-            <div class="info-item" *ngIf="project.expectedEndDate">
-              <span class="info-label">{{ 'project.endDate' | translate }}</span>
-              <span class="info-value">{{ project.expectedEndDate | date:'mediumDate' }}</span>
-            </div>
-            <div class="info-item" *ngIf="project.actualEndDate">
-              <span class="info-label">{{ 'project.actualEndDate' | translate }}</span>
-              <span class="info-value">{{ project.actualEndDate | date:'mediumDate' }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">{{ 'common.updatedAt' | translate }}</span>
-              <span class="info-value">{{ project.updatedAt | date:'mediumDate' }}</span>
+
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- Tab 3: Images -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>photo_library</mat-icon>&nbsp;Photos
+          <span class="pd-tab-badge" *ngIf="images.length">{{ images.length }}</span>
+        </ng-template>
+
+        <div class="pd-tab-content">
+
+          <div *ngIf="images.length === 0" class="pd-empty">
+            <mat-icon>photo_camera</mat-icon>
+            <p>No photos uploaded for this project.</p>
+          </div>
+
+          <div *ngIf="images.length > 0" class="pd-photo-grid">
+            <div class="pd-photo-card" *ngFor="let img of images"
+                 (click)="openLightbox(img)">
+              <div class="pd-photo-thumb">
+                <mat-icon class="pd-photo-placeholder">image</mat-icon>
+                <div class="pd-photo-overlay">
+                  <mat-icon>zoom_in</mat-icon>
+                </div>
+              </div>
+              <div class="pd-photo-caption">
+                <span class="pd-photo-name">{{ img.titleEn || img.originalFileName }}</span>
+                <span class="pd-photo-date" *ngIf="img.uploadedAt">
+                  {{ img.uploadedAt | date:'d MMM yyyy' }}
+                </span>
+              </div>
             </div>
           </div>
-        </mat-card-content>
-      </mat-card>
 
-    </div>
+        </div>
+      </mat-tab>
+
+      <!-- Tab 4: Fund -->
+      <mat-tab *ngIf="p.fundId">
+        <ng-template mat-tab-label>
+          <mat-icon>account_balance</mat-icon>&nbsp;Fund
+        </ng-template>
+
+        <div class="pd-tab-content">
+          <div *ngIf="!fund" class="pd-empty">
+            <mat-spinner diameter="32"></mat-spinner>
+            <p>Loading fund details…</p>
+          </div>
+          <ng-container *ngIf="fund as f">
+            <div class="pd-card">
+              <div class="pd-card-title">
+                <mat-icon>account_balance</mat-icon>
+                {{ label(f.schemeNameEn, f.schemeNameHi) }}
+              </div>
+              <div class="pd-info-grid">
+                <div class="pd-info-item">
+                  <span class="pd-info-label">Fund Source</span>
+                  <span class="pd-info-value">{{ 'fund.sources.' + f.fundSource | translate }}</span>
+                </div>
+                <div class="pd-info-item">
+                  <span class="pd-info-label">Financial Year</span>
+                  <span class="pd-info-value">{{ f.financialYear }}</span>
+                </div>
+                <div class="pd-info-item">
+                  <span class="pd-info-label">Total Amount</span>
+                  <span class="pd-info-value allocated">{{ f.totalAmount | inr }}</span>
+                </div>
+                <div class="pd-info-item">
+                  <span class="pd-info-label">Amount Received</span>
+                  <span class="pd-info-value remaining">{{ f.amountReceived | inr }}</span>
+                </div>
+                <div class="pd-info-item" *ngIf="f.referenceNumber">
+                  <span class="pd-info-label">Reference No.</span>
+                  <span class="pd-info-value">{{ f.referenceNumber }}</span>
+                </div>
+                <div class="pd-info-item">
+                  <span class="pd-info-label">Status</span>
+                  <span class="pd-info-value">
+                    <span class="pd-fund-status pd-fund-{{ f.status.toLowerCase() }}">
+                      {{ f.status }}
+                    </span>
+                  </span>
+                </div>
+              </div>
+              <div class="pd-fund-bar-section">
+                <div class="pd-fund-bar-label">
+                  <span>Utilisation</span>
+                  <span>{{ f.totalAmount > 0 ? ((f.amountReceived / f.totalAmount)*100).toFixed(1) : 0 }}%</span>
+                </div>
+                <vp-budget-bar [spent]="f.amountReceived" [allocated]="f.totalAmount"></vp-budget-bar>
+              </div>
+              <p class="pd-fund-description" *ngIf="f.descriptionEn || f.descriptionHi">
+                {{ label(f.descriptionEn, f.descriptionHi) }}
+              </p>
+            </div>
+          </ng-container>
+        </div>
+      </mat-tab>
+
+    </mat-tab-group>
 
   </ng-container>
+
+  <!-- ── Image lightbox ─────────────────────────────────── -->
+  <div class="pd-lightbox" *ngIf="lightboxDoc" (click)="closeLightbox()">
+    <div class="pd-lightbox-inner" (click)="$event.stopPropagation()">
+      <button mat-icon-button class="pd-lightbox-close" (click)="closeLightbox()">
+        <mat-icon>close</mat-icon>
+      </button>
+      <div class="pd-lightbox-body">
+        <mat-spinner *ngIf="lightboxLoading" diameter="48"></mat-spinner>
+        <img *ngIf="!lightboxLoading && lightboxUrl"
+             [src]="lightboxUrl" class="pd-lightbox-img"
+             [alt]="lightboxDoc.originalFileName">
+      </div>
+      <div class="pd-lightbox-caption" *ngIf="lightboxDoc">
+        {{ lightboxDoc.titleEn || lightboxDoc.originalFileName }}
+        <button mat-icon-button title="Download" (click)="download(lightboxDoc)">
+          <mat-icon>download</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
 
 </div>

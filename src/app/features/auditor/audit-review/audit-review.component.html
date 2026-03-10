@@ -1,7 +1,315 @@
 <div class="page-container">
-  <div class="page-header">
-    <h1>Audit Review</h1>
+
+  <!-- Header -->
+  <div class="page-header fade-in">
+    <div class="header-text">
+      <h1>Audit Review</h1>
+      <p class="subtitle">Verify expenditures and review project spending</p>
+    </div>
   </div>
-  <!-- TODO: Implement Audit Review view -->
-  <p>{{ 'common.loading' | translate }}</p>
+
+  <!-- Tab bar -->
+  <div class="tab-bar fade-in">
+    <button class="tab-btn" [class.active]="activeTab==='pending'" (click)="onTabChange('pending')">
+      <mat-icon>hourglass_empty</mat-icon>
+      Pending Verification
+      <span class="tab-badge" *ngIf="pendingExpenditures.length > 0">{{ pendingExpenditures.length }}</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab==='history'" (click)="onTabChange('history')">
+      <mat-icon>history</mat-icon>
+      Project History
+    </button>
+  </div>
+
+  <!-- ── PENDING TAB ─────────────────────────────────── -->
+  <ng-container *ngIf="activeTab === 'pending'">
+
+    <!-- Summary -->
+    <div class="summary-bar fade-in" *ngIf="!loading && pendingExpenditures.length > 0">
+      <div class="sum-item">
+        <span class="sum-label">Pending Count</span>
+        <span class="sum-value warn">{{ pendingExpenditures.length }}</span>
+      </div>
+      <div class="sum-divider"></div>
+      <div class="sum-item">
+        <span class="sum-label">Total Pending Amount</span>
+        <span class="sum-value amount">{{ totalPendingAmount | inr }}</span>
+      </div>
+    </div>
+
+    <div *ngIf="loading" class="state-container"><mat-spinner diameter="48"></mat-spinner><p>Loading…</p></div>
+    <div *ngIf="!loading && error" class="state-container error-state">
+      <mat-icon>error_outline</mat-icon><p>Failed to load.</p>
+      <button mat-raised-button color="primary" (click)="loadPending()">Retry</button>
+    </div>
+    <div *ngIf="!loading && !error && pendingExpenditures.length === 0" class="state-container success-state">
+      <mat-icon>check_circle</mat-icon>
+      <p>All expenditures are verified. Nothing pending.</p>
+    </div>
+
+    <div *ngIf="!loading && !error && pendingExpenditures.length > 0"
+         class="main-layout" [class.has-detail]="selectedExp">
+
+      <!-- Pending table -->
+      <div class="table-wrapper fade-in">
+        <table mat-table [dataSource]="pendingExpenditures" class="exp-table">
+
+          <ng-container matColumnDef="voucher">
+            <th mat-header-cell *matHeaderCellDef>Voucher / ID</th>
+            <td mat-cell *matCellDef="let e">
+              <div class="voucher-cell">
+                <span class="voucher-no">{{ e.voucherNumber || ('EXP-' + e.id) }}</span>
+                <span class="fy-badge">{{ e.financialYear }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="project">
+            <th mat-header-cell *matHeaderCellDef>Project</th>
+            <td mat-cell *matCellDef="let e">
+              <span class="proj-name">{{ e.projectNameEn }}</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="contractor">
+            <th mat-header-cell *matHeaderCellDef>Contractor</th>
+            <td mat-cell *matCellDef="let e">
+              <span *ngIf="e.contractorNameEn" class="contractor-name">{{ e.contractorNameEn }}</span>
+              <span *ngIf="!e.contractorNameEn" class="muted">—</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="amount">
+            <th mat-header-cell *matHeaderCellDef>Amount</th>
+            <td mat-cell *matCellDef="let e">
+              <span class="amount-value">{{ e.amount | inr }}</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="paymentDate">
+            <th mat-header-cell *matHeaderCellDef>Date</th>
+            <td mat-cell *matCellDef="let e">
+              <span class="date-val">{{ e.paymentDate | date:'dd MMM yyyy' }}</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="mode">
+            <th mat-header-cell *matHeaderCellDef>Mode</th>
+            <td mat-cell *matCellDef="let e">
+              <span class="mode-chip">
+                <mat-icon>{{ paymentModeIcons[$any(e.paymentMode)] }}</mat-icon>
+                {{ e.paymentMode | titlecase }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="recordedBy">
+            <th mat-header-cell *matHeaderCellDef>Recorded By</th>
+            <td mat-cell *matCellDef="let e">
+              <span class="recorded-by">{{ e.recordedByUsername || '—' }}</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let e">
+              <div class="row-actions">
+                <button mat-icon-button matTooltip="View details"
+                        [class.active-detail]="selectedExp?.id === e.id"
+                        (click)="selectExp(e); $event.stopPropagation()">
+                  <mat-icon>info</mat-icon>
+                </button>
+                <button mat-raised-button color="primary" class="verify-btn"
+                        [disabled]="verifyingId === e.id"
+                        (click)="verify(e); $event.stopPropagation()">
+                  <mat-spinner diameter="14" *ngIf="verifyingId === e.id"></mat-spinner>
+                  <mat-icon *ngIf="verifyingId !== e.id">check</mat-icon>
+                  <span>Verify</span>
+                </button>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="pendingColumns; sticky: true"></tr>
+          <tr mat-row *matRowDef="let row; columns: pendingColumns"
+              class="table-row"
+              [class.selected-row]="selectedExp?.id === row.id"
+              (click)="selectExp(row)"></tr>
+        </table>
+      </div>
+
+      <!-- Detail panel -->
+      <div class="detail-panel fade-in" *ngIf="selectedExp">
+        <div class="detail-header">
+          <h3>Expenditure Detail</h3>
+          <button mat-icon-button (click)="selectedExp = null"><mat-icon>close</mat-icon></button>
+        </div>
+        <div class="detail-body">
+          <div class="detail-row">
+            <span class="dl">Voucher</span>
+            <span class="dv mono">{{ selectedExp.voucherNumber || ('EXP-' + selectedExp.id) }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="dl">Project</span>
+            <span class="dv">{{ selectedExp.projectNameEn }}</span>
+          </div>
+          <div class="detail-row" *ngIf="selectedExp.contractorNameEn">
+            <span class="dl">Contractor</span>
+            <span class="dv">{{ selectedExp.contractorNameEn }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="dl">Amount</span>
+            <span class="dv amount-big">{{ selectedExp.amount | inr }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="dl">Payment Date</span>
+            <span class="dv">{{ selectedExp.paymentDate | date:'dd MMMM yyyy' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="dl">Payment Mode</span>
+            <span class="dv">{{ selectedExp.paymentMode }}</span>
+          </div>
+          <div class="detail-row" *ngIf="selectedExp.paymentReference">
+            <span class="dl">Reference</span>
+            <span class="dv mono">{{ selectedExp.paymentReference }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="dl">Financial Year</span>
+            <span class="dv">{{ selectedExp.financialYear }}</span>
+          </div>
+          <div class="detail-row" *ngIf="selectedExp.descriptionEn">
+            <span class="dl">Description</span>
+            <span class="dv">{{ selectedExp.descriptionEn }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="dl">Recorded By</span>
+            <span class="dv">{{ selectedExp.recordedByUsername || '—' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="dl">Recorded At</span>
+            <span class="dv">{{ selectedExp.createdAt | date:'dd MMM yyyy, HH:mm' }}</span>
+          </div>
+
+          <div class="verify-action" *ngIf="!selectedExp.isVerified">
+            <button mat-raised-button color="primary" class="full-verify-btn"
+                    [disabled]="verifyingId === selectedExp.id"
+                    (click)="verify(selectedExp)">
+              <mat-spinner diameter="18" *ngIf="verifyingId === selectedExp.id"></mat-spinner>
+              <mat-icon *ngIf="verifyingId !== selectedExp.id">verified</mat-icon>
+              <span>{{ verifyingId === selectedExp.id ? 'Verifying…' : 'Mark as Verified' }}</span>
+            </button>
+          </div>
+          <div class="verified-notice" *ngIf="selectedExp.isVerified">
+            <mat-icon>check_circle</mat-icon>
+            <span>Verified by <strong>{{ selectedExp.verifiedByUsername }}</strong></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ── HISTORY TAB ─────────────────────────────────── -->
+  <ng-container *ngIf="activeTab === 'history'">
+
+    <div class="history-filter fade-in">
+      <mat-form-field appearance="outline" class="project-selector">
+        <mat-label>Select Project to view history</mat-label>
+        <mat-select [(ngModel)]="selectedProjectId" (ngModelChange)="onProjectChange()">
+          <mat-option *ngFor="let p of projects" [value]="p.id">
+            {{ p.projectCode }} — {{ p.nameEn }}
+          </mat-option>
+        </mat-select>
+        <mat-icon matSuffix>construction</mat-icon>
+      </mat-form-field>
+    </div>
+
+    <div *ngIf="!selectedProjectId" class="state-container">
+      <mat-icon>search</mat-icon><p>Select a project to view its expenditure history.</p>
+    </div>
+    <div *ngIf="loading && selectedProjectId" class="state-container">
+      <mat-spinner diameter="48"></mat-spinner><p>Loading…</p>
+    </div>
+    <div *ngIf="!loading && error" class="state-container error-state">
+      <mat-icon>error_outline</mat-icon><p>Failed to load.</p>
+      <button mat-raised-button color="primary" (click)="loadProjectHistory()">Retry</button>
+    </div>
+    <div *ngIf="!loading && !error && selectedProjectId && allExpenditures.length === 0" class="state-container">
+      <mat-icon>receipt_long</mat-icon><p>No expenditures for this project.</p>
+    </div>
+
+    <div *ngIf="!loading && !error && allExpenditures.length > 0" class="table-wrapper fade-in">
+      <table mat-table [dataSource]="allExpenditures" class="exp-table">
+
+        <ng-container matColumnDef="voucher">
+          <th mat-header-cell *matHeaderCellDef>Voucher / ID</th>
+          <td mat-cell *matCellDef="let e">
+            <div class="voucher-cell">
+              <span class="voucher-no">{{ e.voucherNumber || ('EXP-' + e.id) }}</span>
+              <span class="fy-badge">{{ e.financialYear }}</span>
+            </div>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="project">
+          <th mat-header-cell *matHeaderCellDef>Project</th>
+          <td mat-cell *matCellDef="let e"><span class="proj-name">{{ e.projectNameEn }}</span></td>
+        </ng-container>
+        <ng-container matColumnDef="contractor">
+          <th mat-header-cell *matHeaderCellDef>Contractor</th>
+          <td mat-cell *matCellDef="let e">
+            <span *ngIf="e.contractorNameEn">{{ e.contractorNameEn }}</span>
+            <span *ngIf="!e.contractorNameEn" class="muted">—</span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="amount">
+          <th mat-header-cell *matHeaderCellDef>Amount</th>
+          <td mat-cell *matCellDef="let e"><span class="amount-value">{{ e.amount | inr }}</span></td>
+        </ng-container>
+        <ng-container matColumnDef="paymentDate">
+          <th mat-header-cell *matHeaderCellDef>Date</th>
+          <td mat-cell *matCellDef="let e"><span class="date-val">{{ e.paymentDate | date:'dd MMM yyyy' }}</span></td>
+        </ng-container>
+        <ng-container matColumnDef="mode">
+          <th mat-header-cell *matHeaderCellDef>Mode</th>
+          <td mat-cell *matCellDef="let e">
+            <span class="mode-chip">
+              <mat-icon>{{ paymentModeIcons[$any(e.paymentMode)] }}</mat-icon>
+              {{ e.paymentMode | titlecase }}
+            </span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let e">
+            <span class="status-chip verified-chip" *ngIf="e.isVerified">
+              <mat-icon>check_circle</mat-icon> Verified
+            </span>
+            <span class="status-chip pending-chip" *ngIf="!e.isVerified">
+              <mat-icon>hourglass_empty</mat-icon> Pending
+            </span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="verifiedBy">
+          <th mat-header-cell *matHeaderCellDef>Verified By</th>
+          <td mat-cell *matCellDef="let e">
+            <span *ngIf="e.verifiedByUsername" class="recorded-by">{{ e.verifiedByUsername }}</span>
+            <span *ngIf="!e.verifiedByUsername" class="muted">—</span>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="historyColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: historyColumns"
+            class="table-row" [class.verified-row]="row.isVerified"></tr>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="!loading && totalPages > 1" class="pagination fade-in">
+      <button mat-icon-button [disabled]="page===0" (click)="goToPage(0)"><mat-icon>first_page</mat-icon></button>
+      <button mat-icon-button [disabled]="page===0" (click)="goToPage(page-1)"><mat-icon>chevron_left</mat-icon></button>
+      <span class="page-info">Page {{ page+1 }} of {{ totalPages }} · {{ totalElements }} records</span>
+      <button mat-icon-button [disabled]="page===totalPages-1" (click)="goToPage(page+1)"><mat-icon>chevron_right</mat-icon></button>
+      <button mat-icon-button [disabled]="page===totalPages-1" (click)="goToPage(totalPages-1)"><mat-icon>last_page</mat-icon></button>
+    </div>
+  </ng-container>
+
 </div>

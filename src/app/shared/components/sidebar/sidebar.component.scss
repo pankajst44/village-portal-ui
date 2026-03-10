@@ -43,15 +43,16 @@
 .nav-list {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-sm) 0;
+  padding: 4px 0;
 }
 
 .nav-item {
   color: rgba(255,255,255,0.78) !important;
-  margin: 2px var(--space-sm);
+  margin: 1px 6px !important;
   border-radius: var(--radius-sm);
   transition: background 0.18s ease, color 0.18s ease;
-  height: 44px !important;
+  height: 38px !important;
+  min-height: 38px !important;
 
   mat-icon { color: rgba(255,255,255,0.65) !important; font-size: 20px; }
 
@@ -71,7 +72,7 @@
 
 .nav-divider {
   border-color: rgba(255,255,255,0.1) !important;
-  margin: var(--space-sm) var(--space-md) !important;
+  margin: 4px 12px !important;
 }
 
 .sidebar-footer {

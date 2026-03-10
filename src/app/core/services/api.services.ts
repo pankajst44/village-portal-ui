@@ -27,6 +27,10 @@ export class FundService {
     return this.http.get<ApiResponse<Fund>>(`${this.base}/${id}`);
   }
 
+  getPublicFundById(id: number): Observable<ApiResponse<Fund>> {
+    return this.http.get<ApiResponse<Fund>>(`${this.base}/public/${id}`);
+  }
+
   getFundsByStatus(status: FundStatus): Observable<ApiResponse<Fund[]>> {
     return this.http.get<ApiResponse<Fund[]>>(`${this.base}/status/${status}`);
   }
@@ -46,6 +50,14 @@ export class FundService {
   deleteFund(id: number): Observable<ApiResponse<void>> {
     return this.http.delete<ApiResponse<void>>(`${this.base}/${id}`);
   }
+  getPublicFunds(page = 0, size = 50): Observable<ApiResponse<PageResponse<Fund> | Fund[]>> {
+  const params = new HttpParams().set('page', page).set('size', size);
+  return this.http.get<ApiResponse<PageResponse<Fund> | Fund[]>>(`${this.base}/public`, { params });
+}
+
+getPublicFundsByStatus(status: FundStatus): Observable<ApiResponse<Fund[]>> {
+  return this.http.get<ApiResponse<Fund[]>>(`${this.base}/public/status/${status}`);
+}
 }
 
 // ── Expenditure Service ───────────────────────────────────
@@ -72,6 +84,12 @@ export class ExpenditureService {
 
   verify(id: number): Observable<ApiResponse<Expenditure>> {
     return this.http.put<ApiResponse<Expenditure>>(`${this.base}/${id}/verify`, {});
+  }
+  getByProjectDateRange(projectId: number, from: string, to: string): Observable<ApiResponse<Expenditure[]>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.http.get<ApiResponse<Expenditure[]>>(
+      `${this.base}/project/${projectId}/date-range`, { params }
+    );
   }
 
   getPendingVerifications(): Observable<ApiResponse<Expenditure[]>> {
@@ -131,6 +149,36 @@ export class DocumentService {
     );
   }
 
+  upload(
+    file: File,
+    documentType: string,
+    titleEn?: string,
+    titleHi?: string,
+    projectId?: number,
+    fundId?: number,
+    expenditureId?: number,
+    isPublic: boolean = true
+  ): Observable<ApiResponse<Document>> {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('documentType', documentType);
+    if (titleEn)       fd.append('titleEn', titleEn);
+    if (titleHi)       fd.append('titleHi', titleHi);
+    if (projectId)     fd.append('projectId', String(projectId));
+    if (fundId)        fd.append('fundId', String(fundId));
+    if (expenditureId) fd.append('expenditureId', String(expenditureId));
+    fd.append('isPublic', String(isPublic));
+    return this.http.post<ApiResponse<Document>>(this.base, fd);
+  }
+
+  getByFund(fundId: number): Observable<ApiResponse<Document[]>> {
+    return this.http.get<ApiResponse<Document[]>>(`${this.base}/fund/${fundId}`);
+  }
+
+  getByExpenditure(expenditureId: number): Observable<ApiResponse<Document[]>> {
+    return this.http.get<ApiResponse<Document[]>>(`${this.base}/expenditure/${expenditureId}`);
+  }
+
   delete(id: number): Observable<ApiResponse<void>> {
     return this.http.delete<ApiResponse<void>>(`${this.base}/${id}`);
   }
@@ -175,11 +223,14 @@ export class ContractorService {
     return this.http.patch<ApiResponse<Contractor>>(`${this.base}/${id}/blacklist`, { reason });
   }
 
+  removeFromBlacklist(id: number): Observable<ApiResponse<Contractor>> {
+    return this.http.patch<ApiResponse<Contractor>>(`${this.base}/${id}/remove-blacklist`, {});
+  }
+
   delete(id: number): Observable<ApiResponse<void>> {
     return this.http.delete<ApiResponse<void>>(`${this.base}/${id}`);
   }
 }
-
 // ── Audit Log Service ─────────────────────────────────────
 
 @Injectable({ providedIn: 'root' })
