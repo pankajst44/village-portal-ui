@@ -9,7 +9,7 @@ import { ShellComponent }    from './layout/shell/shell.component';
 
 const routes: Routes = [
 
-  // ── Guest-only: /login ────────────────────────────────────
+  // ── Guest-only: /login ────────────────────────────────
   {
     path: 'login',
     canActivate: [GuestGuard],
@@ -17,7 +17,24 @@ const routes: Routes = [
       import('./features/auth/auth.module').then(m => m.AuthModule)
   },
 
-  // ── Authenticated shell — only when logged in ─────────────
+  // ── Resident self-registration (public — no auth) ─────
+  {
+    path: 'register',
+    loadChildren: () =>
+      import('./features/cms/auth/register/register.module')
+        .then(m => m.RegisterModule)
+  },
+
+  // ── Public complaints (accessible WITHOUT login) ──────
+  // Uses PublicLayoutComponent (green navbar, no sidebar).
+  // The /submit child requires auth — handled inside PublicCmsModule.
+  {
+    path: 'complaints',
+    loadChildren: () =>
+      import('./features/cms/cms-public.module').then(m => m.PublicCmsModule)
+  },
+
+  // ── Authenticated shell ───────────────────────────────
   {
     path: '',
     component: ShellComponent,
@@ -34,6 +51,14 @@ const routes: Routes = [
         path: '',
         loadChildren: () =>
           import('./features/public/public.module').then(m => m.PublicModule)
+      },
+      // ── CMS inside authenticated shell ─────────────────
+      // /cms/* resolves here when logged in
+      // But navigating to /complaints also works (public route above)
+      {
+        path: 'cms',
+        loadChildren: () =>
+          import('./features/cms/cms.module').then(m => m.CmsModule)
       },
       {
         path: 'officer',
@@ -59,25 +84,14 @@ const routes: Routes = [
     ]
   },
 
-  // ── Guest public pages — only when NOT logged in ──────────
+  // ── Guest public pages ────────────────────────────────
   {
     path: '',
     canMatch: [GuestMatchGuard],
-    children: [
-      {
-        path: 'dashboard',
-        loadChildren: () =>
-          import('./features/dashboard/dashboard.module').then(m => m.DashboardModule)
-      },
-      {
-        path: '',
-        loadChildren: () =>
-          import('./features/public/public.module').then(m => m.PublicModule)
-      },
-    ]
+    loadChildren: () =>
+      import('./features/public/public-guest.module').then(m => m.PublicGuestModule)
   },
 
-  // ── Fallback ──────────────────────────────────────────────
   { path: '**', redirectTo: 'login' }
 ];
 

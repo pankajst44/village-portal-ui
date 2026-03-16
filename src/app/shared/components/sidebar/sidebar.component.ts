@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { AuthService } from '../../../core/services/auth.service';
+import { AuthService }  from '../../../core/services/auth.service';
+import { CmsNotificationService } from '../../../features/cms/services/cms.services';
 
 interface NavItem {
   label:    string;
@@ -8,6 +9,7 @@ interface NavItem {
   route:    string;
   roles?:   string[];
   divider?: boolean;
+  badgeKey?: string;  // 'cmsUnread' — dynamic badge
 }
 
 @Component({
@@ -20,22 +22,42 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   navItems: NavItem[] = [];
   role = '';
+  cmsUnreadCount = 0;
   private sub?: Subscription;
+  private notifInterval?: ReturnType<typeof setInterval>;
 
   private readonly allNavItems: NavItem[] = [
 
-    // ── All roles ──────────────────────────────────────────
+    // ── All roles ──────────────────────────────────────
     { label: 'nav.dashboard',   icon: 'dashboard',       route: '/dashboard' },
 
-    // ── Officer only (not shown to ADMIN — admin has dedicated admin routes) ──
-    { label: 'nav.updateProject', icon: 'edit_note',     route: '/officer/projects',
-      roles: ['OFFICER'], divider: true },
-    { label: 'nav.spending',      icon: 'payments',      route: '/officer/spending/new',
+    // ── CMS — Resident ─────────────────────────────────
+    { label: 'nav.cms.complaints', icon: 'report_problem', route: '/cms/complaints',
+      roles: ['RESIDENT', 'ADMIN', 'OFFICER', 'AUDITOR'], divider: true },
+    { label: 'nav.cms.myComplaints', icon: 'history',      route: '/cms/my-complaints',
+      roles: ['RESIDENT'] },
+    { label: 'nav.cms.submitComplaint', icon: 'add_circle', route: '/cms/complaints/submit',
+      roles: ['RESIDENT'] },
+    { label: 'nav.cms.notifications', icon: 'notifications', route: '/cms/notifications',
+      roles: ['RESIDENT', 'OFFICER'], badgeKey: 'cmsUnread' },
+
+    // ── CMS — Officer ──────────────────────────────────
+    { label: 'nav.cms.officerQueue', icon: 'assignment_ind', route: '/cms/officer',
       roles: ['OFFICER', 'ADMIN'] },
-    { label: 'nav.documents',     icon: 'folder_open',   route: '/officer/documents/upload',
+
+    // ── CMS — Admin / Auditor ──────────────────────────
+    { label: 'nav.cms.adminPanel', icon: 'admin_panel_settings', route: '/cms/admin',
+      roles: ['ADMIN', 'AUDITOR'] },
+
+    // ── Officer portal (non-CMS) ───────────────────────
+    { label: 'nav.updateProject', icon: 'edit_note',      route: '/officer/projects',
+      roles: ['OFFICER'], divider: true },
+    { label: 'nav.spending',      icon: 'payments',       route: '/officer/spending/new',
+      roles: ['OFFICER', 'ADMIN'] },
+    { label: 'nav.documents',     icon: 'folder_open',    route: '/officer/documents/upload',
       roles: ['OFFICER', 'ADMIN', 'AUDITOR'] },
 
-    // ── Admin ──────────────────────────────────────────────
+    // ── Admin ──────────────────────────────────────────
     { label: 'nav.users',       icon: 'manage_accounts', route: '/admin/users',
       roles: ['ADMIN'], divider: true },
     { label: 'nav.funds',       icon: 'account_balance', route: '/admin/funds',
@@ -45,7 +67,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     { label: 'nav.contractors', icon: 'engineering',     route: '/admin/contractors',
       roles: ['ADMIN'] },
 
-    // ── Admin + Auditor ────────────────────────────────────
+    // ── Admin + Auditor ────────────────────────────────
     { label: 'nav.auditLogs',   icon: 'history',         route: '/admin/audit-logs',
       roles: ['ADMIN', 'AUDITOR'], divider: true },
     { label: 'nav.reports',     icon: 'assessment',      route: '/auditor/reports',
@@ -54,7 +76,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
       roles: ['AUDITOR', 'ADMIN'] },
   ];
 
-  constructor(private auth: AuthService) {}
+  constructor(
+    private auth:    AuthService,
+    private notifSvc: CmsNotificationService
+  ) {}
 
   ngOnInit(): void {
     this.sub = this.auth.isLoggedIn().subscribe(() => {
@@ -62,8 +87,28 @@ export class SidebarComponent implements OnInit, OnDestroy {
       this.navItems = this.allNavItems.filter(item =>
         !item.roles || item.roles.includes(this.role)
       );
+      // Poll unread notifications every 60s for residents and officers
+      if (this.role === 'RESIDENT' || this.role === 'OFFICER') {
+        this.loadUnreadCount();
+        this.notifInterval = setInterval(() => this.loadUnreadCount(), 60000);
+      }
     });
   }
 
-  ngOnDestroy(): void { this.sub?.unsubscribe(); }
+  private loadUnreadCount(): void {
+    this.notifSvc.getUnreadCount().subscribe(
+      res => this.cmsUnreadCount = res.data,
+      () => {}
+    );
+  }
+
+  getBadge(item: NavItem): number {
+    if (item.badgeKey === 'cmsUnread') return this.cmsUnreadCount;
+    return 0;
+  }
+
+  ngOnDestroy(): void {
+    this.sub?.unsubscribe();
+    if (this.notifInterval) clearInterval(this.notifInterval);
+  }
 }

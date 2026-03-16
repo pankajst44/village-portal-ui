@@ -1,0 +1,190 @@
+<div class="cms-page">
+
+  <div class="page-header">
+    <h1 class="page-title">
+      <mat-icon>add_circle</mat-icon> File a Complaint / शिकायत दर्ज करें
+    </h1>
+  </div>
+
+  <!-- Step indicator -->
+  <div class="step-indicator">
+    <div class="step" [class.active]="step >= 1" [class.done]="step > 1">
+      <div class="step-circle">{{ step > 1 ? '✓' : '1' }}</div>
+      <span>Complaint Details</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" [class.active]="step >= 2" [class.done]="step > 2">
+      <div class="step-circle">{{ step > 2 ? '✓' : '2' }}</div>
+      <span>Evidence (Optional)</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" [class.active]="step >= 3">
+      <div class="step-circle">3</div>
+      <span>Review & Submit</span>
+    </div>
+  </div>
+
+  <!-- STEP 1: Details -->
+  <mat-card *ngIf="step === 1" class="step-card">
+    <mat-card-header><mat-card-title>Complaint Details</mat-card-title></mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="form" novalidate>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="flex-2">
+            <mat-label>Category / श्रेणी *</mat-label>
+            <mat-select formControlName="categoryId">
+              <mat-option *ngFor="let c of categories" [value]="c.id">
+                {{ c.nameEn }} — {{ c.nameHi }}
+              </mat-option>
+            </mat-select>
+            <mat-error>Category is required</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Ward Number / वार्ड *</mat-label>
+            <mat-select formControlName="wardNumber">
+              <mat-option *ngFor="let w of wards" [value]="w">Ward {{ w }}</mat-option>
+            </mat-select>
+            <mat-error>Ward number is required</mat-error>
+          </mat-form-field>
+        </div>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Title (English) *</mat-label>
+          <input matInput formControlName="titleEn"
+                 placeholder="e.g. No water supply for 3 days in Ward 1">
+          <mat-hint align="end">{{ f['titleEn'].value?.length ?? 0 }}/200</mat-hint>
+          <mat-error *ngIf="f['titleEn'].hasError('required')">Title is required</mat-error>
+          <mat-error *ngIf="f['titleEn'].hasError('minlength')">Minimum 10 characters</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>शीर्षक (हिंदी)</mat-label>
+          <input matInput formControlName="titleHi" placeholder="वार्ड 1 में 3 दिन से पानी नहीं">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description (English) *</mat-label>
+          <textarea matInput formControlName="descriptionEn" rows="5"
+                    placeholder="Describe the issue in detail. Include when it started, who is affected, and any previous attempts to resolve it.">
+          </textarea>
+          <mat-hint align="end">{{ f['descriptionEn'].value?.length ?? 0 }}/5000</mat-hint>
+          <mat-error *ngIf="f['descriptionEn'].hasError('required')">Description is required</mat-error>
+          <mat-error *ngIf="f['descriptionEn'].hasError('minlength')">Minimum 20 characters</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>विवरण (हिंदी)</mat-label>
+          <textarea matInput formControlName="descriptionHi" rows="3"></textarea>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Exact Location *</mat-label>
+          <input matInput formControlName="locationText"
+                 placeholder="e.g. Near Main Bazaar, opposite the old temple, Ward 1">
+          <mat-icon matSuffix>location_on</mat-icon>
+          <mat-error *ngIf="f['locationText'].hasError('required')">Location is required</mat-error>
+          <mat-error *ngIf="f['locationText'].hasError('minlength')">Minimum 5 characters</mat-error>
+        </mat-form-field>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Priority</mat-label>
+            <mat-select formControlName="priority">
+              <mat-option value="LOW">Low</mat-option>
+              <mat-option value="MEDIUM">Medium</mat-option>
+              <mat-option value="HIGH">High</mat-option>
+              <mat-option value="CRITICAL">Critical</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <div class="anon-toggle flex-1">
+            <mat-slide-toggle formControlName="isAnonymousDisplay" color="primary">
+              Show name as "Anonymous Resident"
+            </mat-slide-toggle>
+            <p class="anon-hint">Your identity is protected — complaint number is still trackable.</p>
+          </div>
+        </div>
+
+      </form>
+    </mat-card-content>
+    <mat-card-actions align="end">
+      <button mat-raised-button color="primary" (click)="nextStep()">
+        Next: Add Evidence <mat-icon>arrow_forward</mat-icon>
+      </button>
+    </mat-card-actions>
+  </mat-card>
+
+  <!-- STEP 2: Evidence upload -->
+  <mat-card *ngIf="step === 2" class="step-card">
+    <mat-card-header><mat-card-title>Upload Evidence (Optional)</mat-card-title></mat-card-header>
+    <mat-card-content>
+      <p class="hint-text">Photos, documents, or videos that support your complaint. Max 5 files.</p>
+
+      <div class="upload-zone" (click)="fileInput.click()">
+        <mat-icon>cloud_upload</mat-icon>
+        <p>Click to select files or drag and drop</p>
+        <p class="upload-hint">Supported: JPG, PNG, PDF, MP4 (max 10MB each)</p>
+        <input #fileInput type="file" hidden multiple accept="image/*,.pdf,.mp4"
+               (change)="onFileSelect($event)">
+      </div>
+
+      <div class="file-list" *ngIf="evidenceFiles.length > 0">
+        <div class="file-item" *ngFor="let f of evidenceFiles; let i = index">
+          <mat-icon>{{ f.type.startsWith('image') ? 'image' : 'description' }}</mat-icon>
+          <span class="file-name">{{ f.name }}</span>
+          <span class="file-size">{{ getFileSizeMB(f) }} MB</span>
+          <button mat-icon-button color="warn" (click)="removeFile(i)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <p class="file-count" *ngIf="evidenceFiles.length > 0">
+        {{ evidenceFiles.length }}/5 files selected
+      </p>
+    </mat-card-content>
+    <mat-card-actions align="end">
+      <button mat-button (click)="prevStep()"><mat-icon>arrow_back</mat-icon> Back</button>
+      <button mat-raised-button color="primary" (click)="nextStep()">
+        Next: Review <mat-icon>arrow_forward</mat-icon>
+      </button>
+    </mat-card-actions>
+  </mat-card>
+
+  <!-- STEP 3: Review -->
+  <mat-card *ngIf="step === 3" class="step-card">
+    <mat-card-header><mat-card-title>Review & Submit</mat-card-title></mat-card-header>
+    <mat-card-content>
+      <div class="review-section">
+        <div class="review-row"><span class="review-label">Category</span><span>{{ getSelectedCategoryName() }}</span></div>
+        <div class="review-row"><span class="review-label">Ward</span><span>{{ form.value.wardNumber }}</span></div>
+        <div class="review-row"><span class="review-label">Title</span><span>{{ form.value.titleEn }}</span></div>
+        <div class="review-row"><span class="review-label">Location</span><span>{{ form.value.locationText }}</span></div>
+        <div class="review-row"><span class="review-label">Priority</span><span>{{ form.value.priority }}</span></div>
+        <div class="review-row"><span class="review-label">Anonymous</span><span>{{ form.value.isAnonymousDisplay ? 'Yes' : 'No' }}</span></div>
+        <div class="review-row"><span class="review-label">Description</span><span>{{ form.value.descriptionEn }}</span></div>
+        <div class="review-row" *ngIf="evidenceFiles.length > 0">
+          <span class="review-label">Evidence</span>
+          <span>{{ evidenceFiles.length }} file(s): {{ getFileNames() }}</span>
+        </div>
+      </div>
+
+      <mat-divider class="review-divider"></mat-divider>
+      <p class="submit-notice">
+        <mat-icon>info</mat-icon>
+        Once submitted, your complaint will be reviewed by the admin. You will receive
+        notifications at every stage.
+      </p>
+    </mat-card-content>
+    <mat-card-actions align="end">
+      <button mat-button (click)="prevStep()"><mat-icon>arrow_back</mat-icon> Back</button>
+      <button mat-raised-button color="primary" (click)="submit()" [disabled]="loading">
+        <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+        <span *ngIf="!loading"><mat-icon>send</mat-icon> Submit Complaint</span>
+      </button>
+    </mat-card-actions>
+  </mat-card>
+
+</div>

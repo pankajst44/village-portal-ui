@@ -5,9 +5,9 @@ import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { environment }   from '../../../environments/environment';
 import { ApiResponse, AuthResponse, LoginRequest } from '../models/models';
 
-const TOKEN_KEY    = 'vp_access_token';
-const REFRESH_KEY  = 'vp_refresh_token';
-const USER_KEY     = 'vp_user';
+const TOKEN_KEY   = 'vp_access_token';
+const REFRESH_KEY = 'vp_refresh_token';
+const USER_KEY    = 'vp_user';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -31,12 +31,47 @@ export class AuthService {
     );
   }
 
+  // ── Refresh Token ──────────────────────────────────────
+  refreshToken(): Observable<ApiResponse<AuthResponse>> {
+    const refreshToken = localStorage.getItem(REFRESH_KEY);
+    if (!refreshToken) {
+      return new BehaviorSubject<ApiResponse<AuthResponse>>({
+        success: false,
+        message: 'No refresh token',
+        data:    null as any
+      }).asObservable();
+    }
+    return this.http.post<ApiResponse<AuthResponse>>(
+      `${this.apiUrl}/refresh`,
+      {},
+      { headers: { 'X-Refresh-Token': refreshToken } }
+    ).pipe(
+      tap(res => {
+        if (res.success && res.data) {
+          this.storeTokens(res.data);
+          this.loggedIn$.next(true);
+        }
+      })
+    );
+  }
+
   // ── Logout ─────────────────────────────────────────────
   logout(): void {
     this.http.post(`${this.apiUrl}/logout`, {}).subscribe({
       complete: () => this.clearAndRedirect(),
       error:    () => this.clearAndRedirect()
     });
+  }
+
+  forceLogout(): void {
+    this.clearAndRedirect();
+  }
+
+  // ── Post-registration token storage (public) ──────────
+  // Called by RegisterComponent after the register API returns tokens.
+  storeSession(data: AuthResponse): void {
+    this.storeTokens(data);
+    this.loggedIn$.next(true);
   }
 
   private clearAndRedirect(): void {
@@ -50,6 +85,10 @@ export class AuthService {
   // ── Token helpers ──────────────────────────────────────
   getToken(): string | null {
     return localStorage.getItem(TOKEN_KEY);
+  }
+
+  getRefreshToken(): string | null {
+    return localStorage.getItem(REFRESH_KEY);
   }
 
   isLoggedIn(): Observable<boolean> {
@@ -70,9 +109,10 @@ export class AuthService {
     return this.getUser()?.role ?? '';
   }
 
-  isAdmin():   boolean { return this.getRole() === 'ADMIN'; }
-  isOfficer(): boolean { return this.getRole() === 'OFFICER'; }
-  isAuditor(): boolean { return this.getRole() === 'AUDITOR'; }
+  isAdmin():    boolean { return this.getRole() === 'ADMIN'; }
+  isOfficer():  boolean { return this.getRole() === 'OFFICER'; }
+  isAuditor():  boolean { return this.getRole() === 'AUDITOR'; }
+  isResident(): boolean { return this.getRole() === 'RESIDENT'; }
 
   hasAnyRole(...roles: string[]): boolean {
     return roles.includes(this.getRole());

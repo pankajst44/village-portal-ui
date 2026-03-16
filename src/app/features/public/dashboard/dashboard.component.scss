@@ -331,3 +331,48 @@
   }
   p { font-size: 0.85rem; color: var(--color-text-hint); margin: 0; }
 }
+
+// ── Complaint CTA ──────────────────────────────────────────
+.complaint-cta {
+  margin-top: 32px;
+  background: linear-gradient(135deg, #1a6b3a 0%, #0f4423 100%);
+  border-radius: 12px;
+  padding: 24px 28px;
+
+  .cta-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+
+    > mat-icon {
+      font-size: 40px;
+      height: 40px;
+      width: 40px;
+      color: #e07b2a;
+      flex-shrink: 0;
+    }
+
+    > div {
+      flex: 1;
+      min-width: 200px;
+      h3 { margin: 0 0 4px; color: #fff; font-size: 18px; }
+      p  { margin: 0; color: rgba(255,255,255,0.75); font-size: 13px;
+           font-family: 'Noto Sans Devanagari', sans-serif; }
+    }
+
+    a { flex-shrink: 0; }
+
+    .register-cta {
+      border-color: rgba(255,255,255,0.5);
+      color: #fff;
+      &:hover { background: rgba(255,255,255,0.1); }
+    }
+  }
+}
+
+    .file-cta {
+      border-color: rgba(255,255,255,0.5);
+      color: #fff;
+      &:hover { background: rgba(255,255,255,0.1); }
+    }

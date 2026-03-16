@@ -1,0 +1,45 @@
+.cms-auth-page {
+  min-height: calc(100vh - 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg, #f7f5f0);
+  padding: 24px 16px;
+}
+
+.cms-auth-card {
+  width: 100%;
+  max-width: 480px;
+
+  .auth-icon {
+    background: var(--color-primary, #1a6b3a);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+  }
+
+  .full-width { width: 100%; margin-bottom: 12px; }
+
+  .submit-btn {
+    width: 100%;
+    margin-top: 8px;
+    height: 44px;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-spinner { display: inline-block; }
+
+  .login-link {
+    font-size: 13px;
+    color: #666;
+    a { color: var(--color-primary, #1a6b3a); font-weight: 500; text-decoration: none; }
+  }
+}

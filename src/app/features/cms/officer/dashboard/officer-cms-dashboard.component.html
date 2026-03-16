@@ -1,0 +1,181 @@
+<div class="officer-layout">
+
+  <!-- Left: complaint list -->
+  <div class="list-panel">
+    <div class="panel-header">
+      <h2>Assigned Complaints</h2>
+      <mat-chip [class.green]="true">{{ total }} total</mat-chip>
+    </div>
+
+    <div class="loading-row" *ngIf="loading"><mat-spinner diameter="32"></mat-spinner></div>
+
+    <div class="empty-state" *ngIf="!loading && complaints.length === 0">
+      <mat-icon>inbox</mat-icon>
+      <p>No complaints assigned to you.</p>
+    </div>
+
+    <div class="complaint-item" *ngFor="let c of complaints"
+         [class.selected]="selected?.id === c.id"
+         [class.overdue]="c.isOverdue"
+         (click)="selectComplaint(c)">
+      <div class="item-header">
+        <span class="item-num">{{ c.complaintNumber }}</span>
+        <vp-complaint-status-badge [status]="c.status"></vp-complaint-status-badge>
+      </div>
+      <p class="item-title">{{ c.titleEn }}</p>
+      <div class="item-meta">
+        <span>Ward {{ c.wardNumber }}</span>
+        <span *ngIf="c.dueDate" [class.overdue-text]="c.isOverdue">
+          Due {{ c.dueDate | date:'dd MMM' }}{{ c.isOverdue ? ' ⚠' : '' }}
+        </span>
+        <vp-priority-badge [priority]="c.priority"></vp-priority-badge>
+      </div>
+    </div>
+
+    <mat-paginator *ngIf="total > pageSize" [length]="total" [pageSize]="pageSize"
+      [pageIndex]="page" (page)="onPage($event)" showFirstLastButtons class="compact-pager">
+    </mat-paginator>
+  </div>
+
+  <!-- Right: detail + actions -->
+  <div class="detail-panel" *ngIf="selected; else noSelection">
+
+    <div class="detail-header">
+      <div>
+        <h2>{{ selected.titleEn }}</h2>
+        <div class="badges-row">
+          <vp-complaint-status-badge [status]="selected.status"></vp-complaint-status-badge>
+          <vp-priority-badge [priority]="selected.priority"></vp-priority-badge>
+        </div>
+      </div>
+      <div class="action-buttons">
+        <button mat-stroked-button *ngIf="selected.status !== 'RESOLVED' && selected.status !== 'CLOSED'"
+                (click)="activePanel = activePanel === 'update' ? null : 'update'">
+          <mat-icon>update</mat-icon> Post Update
+        </button>
+        <button mat-raised-button color="primary"
+                *ngIf="selected.status === 'ASSIGNED' || selected.status === 'IN_PROGRESS'"
+                (click)="activePanel = activePanel === 'resolve' ? null : 'resolve'">
+          <mat-icon>task_alt</mat-icon> Resolve
+        </button>
+      </div>
+    </div>
+
+    <!-- Post update panel -->
+    <mat-card class="action-panel" *ngIf="activePanel === 'update'">
+      <mat-card-header><mat-card-title>Post Update</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="updateForm">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Update note</mat-label>
+            <textarea matInput formControlName="note" rows="3"
+                      placeholder="Describe the current status or action taken..."></textarea>
+            <mat-error>Note is required (min 5 characters)</mat-error>
+          </mat-form-field>
+          <mat-slide-toggle formControlName="isPublicNote" color="primary">
+            Visible to resident
+          </mat-slide-toggle>
+        </form>
+      </mat-card-content>
+      <mat-card-actions align="end">
+        <button mat-button (click)="activePanel = null">Cancel</button>
+        <button mat-raised-button color="primary" (click)="postUpdate()" [disabled]="submitting">
+          <mat-spinner *ngIf="submitting" diameter="18"></mat-spinner>
+          <span *ngIf="!submitting">Post Update</span>
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
+    <!-- Resolve panel -->
+    <mat-card class="action-panel resolve-panel" *ngIf="activePanel === 'resolve'">
+      <mat-card-header><mat-card-title>Mark as Resolved</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="resolveForm">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Resolution note *</mat-label>
+            <textarea matInput formControlName="resolutionNote" rows="4"
+                      placeholder="Describe what was done to resolve this issue..."></textarea>
+            <mat-error>Resolution note required (min 20 characters)</mat-error>
+          </mat-form-field>
+        </form>
+
+        <div class="proof-upload">
+          <p class="proof-label">Resolution Proof Photos / Documents</p>
+          <button mat-stroked-button (click)="proofInput.click()">
+            <mat-icon>upload</mat-icon> Upload Proof Files
+          </button>
+          <input #proofInput type="file" hidden multiple accept="image/*,.pdf"
+                 (change)="onProofSelect($event)">
+          <div class="proof-files" *ngIf="proofFiles.length > 0">
+            <span *ngFor="let f of proofFiles" class="proof-chip">{{ f.name }}</span>
+          </div>
+        </div>
+        <p class="proof-note"><mat-icon>info</mat-icon> At least one proof file is required to mark resolved.</p>
+      </mat-card-content>
+      <mat-card-actions align="end">
+        <button mat-button (click)="activePanel = null">Cancel</button>
+        <button mat-raised-button color="primary" (click)="uploadAndResolve()" [disabled]="submitting || proofFiles.length === 0">
+          <mat-spinner *ngIf="submitting" diameter="18"></mat-spinner>
+          <span *ngIf="!submitting">Submit Resolution</span>
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
+    <!-- Complaint info tabs -->
+    <mat-tab-group animationDuration="200ms">
+      <mat-tab label="Details">
+        <div class="tab-body">
+          <div class="info-grid">
+            <div class="info-item"><span class="info-label">Category</span>{{ selected.categoryNameEn }}</div>
+            <div class="info-item"><span class="info-label">Ward</span>{{ selected.wardNumber }}</div>
+            <div class="info-item"><span class="info-label">Location</span>{{ selected.locationText }}</div>
+            <div class="info-item"><span class="info-label">Submitted by</span>{{ selected.submitterDisplayName }}</div>
+            <div class="info-item" *ngIf="selected.dueDate">
+              <span class="info-label">Due</span>
+              <span [class.overdue-text]="selected.isOverdue">{{ selected.dueDate | date:'dd MMM yyyy' }}</span>
+            </div>
+          </div>
+          <p class="description">{{ selected.descriptionEn }}</p>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Timeline ({{ selected.timeline.length }})">
+        <div class="tab-body timeline">
+          <div class="timeline-item" *ngFor="let t of selected.timeline">
+            <div class="t-dot"></div>
+            <div class="t-content">
+              <div class="t-header">
+                <strong>{{ t.actorName }}</strong>
+                <span class="t-time">{{ t.createdAt | date:'dd MMM, h:mm a' }}</span>
+              </div>
+              <p class="t-note" *ngIf="t.note">{{ t.note }}</p>
+            </div>
+          </div>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Evidence ({{ selected.evidence.length }})">
+        <div class="tab-body">
+          <div *ngIf="selected.evidence.length === 0" class="no-data">No evidence uploaded.</div>
+          <div class="evidence-list">
+            <div class="evidence-item" *ngFor="let e of selected.evidence">
+              <mat-icon>{{ e.fileType && e.fileType.startsWith('image') ? 'image' : 'description' }}</mat-icon>
+              <span>{{ e.originalFileName }}</span>
+              <a mat-icon-button [href]="getEvidenceUrl(selected.id, e.id)" target="_blank">
+                <mat-icon>download</mat-icon>
+              </a>
+            </div>
+          </div>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </div>
+
+  <ng-template #noSelection>
+    <div class="no-selection">
+      <mat-icon>touch_app</mat-icon>
+      <p>Select a complaint from the list to view details and take action.</p>
+    </div>
+  </ng-template>
+
+</div>

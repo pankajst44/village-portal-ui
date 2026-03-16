@@ -1,0 +1,92 @@
+.cms-page { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+.loading-center { display: flex; justify-content: center; padding: 80px; }
+
+.breadcrumb {
+  display: flex; gap: 12px; align-items: center; margin-bottom: 16px; font-size: 13px;
+  a { color: var(--color-primary, #1a6b3a); text-decoration: none; }
+  span { color: #999; }
+}
+
+.header-card {
+  margin-bottom: 20px;
+  .header-row { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .header-left { flex: 1; }
+  .number-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .complaint-num { font-family: monospace; font-size: 13px; color: #999; }
+  .duplicate-icon { font-size: 16px; color: #e65100; }
+  .escalation-badge {
+    background: #e65100; color: #fff; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
+  }
+  .title-en { margin: 0 0 4px; font-size: 20px; font-weight: 700; }
+  .title-hi { margin: 0 0 12px; font-size: 15px; color: #555; font-family: 'Noto Sans Devanagari', sans-serif; }
+  .badges-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .vote-col { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .vote-btn { height: 48px; min-width: 120px; }
+  .support-count { font-size: 12px; color: #666; }
+  .support-display { display: flex; align-items: center; gap: 4px; font-size: 18px; font-weight: 600; color: #1a6b3a;
+    mat-icon { color: #1a6b3a; } }
+
+  .meta-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee;
+  }
+  .meta-item { display: flex; flex-direction: column; gap: 2px; }
+  .meta-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #999; }
+  .overdue { color: #c62828; font-weight: 600; }
+}
+
+.detail-tabs { margin-bottom: 20px; }
+
+.tab-content { padding: 20px 0; }
+
+.description { font-size: 15px; line-height: 1.7; color: #333; white-space: pre-wrap; }
+.hi-text { font-family: 'Noto Sans Devanagari', sans-serif; }
+
+.timeline { position: relative; padding-left: 24px; }
+.timeline-item {
+  position: relative; margin-bottom: 24px;
+  &::before { content: ''; position: absolute; left: -20px; top: 8px; bottom: -24px; width: 2px; background: #e0e0e0; }
+  &:last-child::before { display: none; }
+}
+.timeline-dot {
+  position: absolute; left: -26px; top: 5px; width: 12px; height: 12px;
+  border-radius: 50%; background: var(--color-primary, #1a6b3a); border: 2px solid #fff;
+  box-shadow: 0 0 0 2px var(--color-primary, #1a6b3a);
+  &.system-dot { background: #9e9e9e; box-shadow: 0 0 0 2px #9e9e9e; }
+}
+.timeline-header { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.actor { font-weight: 600; font-size: 13px; }
+.time { font-size: 12px; color: #999; }
+.status-change { display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+  mat-icon { font-size: 16px; color: #666; } }
+.timeline-note { margin: 4px 0 0; font-size: 14px; color: #444; }
+.private-tag { font-size: 11px; color: #999; font-style: italic; }
+
+.no-evidence { padding: 20px; color: #999; text-align: center; }
+.evidence-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+.evidence-card { overflow: hidden;
+  .evidence-preview img { width: 100%; height: 140px; object-fit: cover; }
+  .evidence-doc { height: 100px; display: flex; align-items: center; justify-content: center; background: #f5f5f5;
+    mat-icon { font-size: 40px; color: #999; } }
+  .evidence-name { font-size: 13px; font-weight: 600; word-break: break-all; margin-bottom: 4px; }
+  .evidence-meta { font-size: 11px; color: #999; margin: 2px 0; }
+}
+
+.resolution-box {
+  background: #e8f5e9; border-radius: 8px; padding: 20px; margin-bottom: 20px;
+  .resolved-icon { color: #2e7d32; font-size: 32px; }
+  h3 { margin: 8px 0 12px; }
+  p { font-size: 15px; line-height: 1.6; }
+  .meta-text { font-size: 13px; color: #666; margin-top: 8px; }
+}
+.resolution-actions {
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  p { margin-right: 8px; }
+}
+
+.rejection-banner {
+  display: flex; align-items: center; gap: 8px; padding: 12px 16px;
+  background: #ffebee; border-radius: 8px; color: #c62828;
+  mat-icon { color: #c62828; }
+}

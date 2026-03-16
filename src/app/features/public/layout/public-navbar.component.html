@@ -1,6 +1,3 @@
-<!-- Matches the shell header exactly — same green bar, same brand.
-     Only difference: no hamburger, no user-menu, no logout.
-     Shows Login button for guests. Hidden entirely when inside shell (logged-in). -->
 <mat-toolbar class="app-header">
 
   <!-- Brand -->
@@ -28,6 +25,11 @@
       <mat-icon>account_balance</mat-icon>
       {{ 'nav.funds' | translate }}
     </a>
+    <a mat-button class="nav-link"
+       routerLink="/complaints" routerLinkActive="nav-active">
+      <mat-icon>report_problem</mat-icon>
+      {{ 'nav.cms.complaints' | translate }}
+    </a>
   </div>
 
   <span class="spacer"></span>
@@ -39,10 +41,61 @@
     <mat-icon>translate</mat-icon>
   </button>
 
-  <!-- Login button — visible only to guests -->
-  <a mat-stroked-button class="login-btn" routerLink="/login" *ngIf="!isLoggedIn">
-    <mat-icon>login</mat-icon>
-    <span class="hide-mobile">{{ 'nav.login' | translate }}</span>
-  </a>
+  <!-- ── GUEST: Register + Login ── -->
+  <ng-container *ngIf="!isLoggedIn">
+    <a mat-stroked-button class="register-btn" routerLink="/register">
+      <mat-icon>person_add</mat-icon>
+      <span class="hide-mobile">Register</span>
+    </a>
+    <a mat-stroked-button class="login-btn" routerLink="/login">
+      <mat-icon>login</mat-icon>
+      <span class="hide-mobile">{{ 'nav.login' | translate }}</span>
+    </a>
+  </ng-container>
+
+  <!-- ── LOGGED IN: user menu with logout ── -->
+  <ng-container *ngIf="isLoggedIn">
+    <!-- Shortcut to resident dashboard if RESIDENT -->
+    <a mat-button class="nav-link hide-mobile"
+       *ngIf="userRole === 'RESIDENT'"
+       routerLink="/cms/my-complaints">
+      <mat-icon>history</mat-icon>
+      My Complaints
+    </a>
+
+    <!-- User dropdown -->
+    <button mat-button [matMenuTriggerFor]="userMenu" class="user-btn">
+      <mat-icon>account_circle</mat-icon>
+      <span class="user-name hide-mobile">{{ userName }}</span>
+      <mat-icon class="chevron">expand_more</mat-icon>
+    </button>
+
+    <mat-menu #userMenu="matMenu" class="user-menu">
+      <div class="user-menu-header" mat-menu-item disabled>
+        <strong>{{ userName }}</strong>
+        <span class="role-chip">{{ userRole }}</span>
+      </div>
+      <mat-divider></mat-divider>
+      <!-- Resident-specific links -->
+      <a mat-menu-item routerLink="/cms/my-complaints" *ngIf="userRole === 'RESIDENT'">
+        <mat-icon>history</mat-icon> My Complaints
+      </a>
+      <a mat-menu-item routerLink="/complaints/submit" *ngIf="userRole === 'RESIDENT'">
+        <mat-icon>add_circle</mat-icon> File Complaint
+      </a>
+      <a mat-menu-item routerLink="/cms/notifications" *ngIf="userRole === 'RESIDENT'">
+        <mat-icon>notifications</mat-icon> Notifications
+      </a>
+      <!-- For non-resident logged-in users — go to shell dashboard -->
+      <a mat-menu-item routerLink="/dashboard" *ngIf="userRole !== 'RESIDENT'">
+        <mat-icon>dashboard</mat-icon> {{ 'nav.dashboard' | translate }}
+      </a>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        {{ 'nav.logout' | translate }}
+      </button>
+    </mat-menu>
+  </ng-container>
 
 </mat-toolbar>

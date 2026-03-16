@@ -199,4 +199,43 @@
     </div>
   </ng-container>
 
+  <!-- Complaint CTA banner -->
+  <div class="complaint-cta">
+    <div class="cta-content">
+      <mat-icon>report_problem</mat-icon>
+      <div>
+        <h3>Have a complaint or issue?</h3>
+        <p>कोई शिकायत है? File it here — track it publicly.</p>
+      </div>
+
+      <!-- Always visible: browse complaints -->
+      <a mat-raised-button color="accent" routerLink="/complaints">
+        <mat-icon>open_in_new</mat-icon>
+        View Complaints / शिकायतें देखें
+      </a>
+
+      <!-- Guest only: prompt to register -->
+      <a mat-stroked-button routerLink="/register" class="register-cta"
+         *ngIf="!isLoggedIn">
+        <mat-icon>person_add</mat-icon>
+        Register to File
+      </a>
+
+      <!-- Resident only: direct file link -->
+      <a mat-stroked-button routerLink="/complaints/submit" class="file-cta"
+         *ngIf="isLoggedIn && isResident">
+        <mat-icon>add_circle</mat-icon>
+        File a Complaint
+      </a>
+
+      <!-- Admin/Officer/Auditor: go to CMS panel -->
+      <a mat-stroked-button routerLink="/cms/admin" class="file-cta"
+         *ngIf="isLoggedIn && !isResident">
+        <mat-icon>admin_panel_settings</mat-icon>
+        CMS Panel
+      </a>
+
+    </div>
+  </div>
+
 </div>

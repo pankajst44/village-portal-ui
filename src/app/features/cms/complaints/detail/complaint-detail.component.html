@@ -1,0 +1,175 @@
+<div class="cms-page" *ngIf="!loading && complaint">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a routerLink="/complaints">← Back to Complaints</a>
+    <span>{{ complaint.complaintNumber }}</span>
+  </div>
+
+  <!-- Header card -->
+  <mat-card class="header-card">
+    <div class="header-row">
+      <div class="header-left">
+        <div class="number-row">
+          <span class="complaint-num">{{ complaint.complaintNumber }}</span>
+          <mat-icon *ngIf="complaint.isDuplicateFlagged" class="duplicate-icon"
+                    matTooltip="Flagged as possible duplicate of {{ complaint.duplicateOfNumber }}">
+            content_copy
+          </mat-icon>
+          <span class="escalation-badge" *ngIf="complaint.escalationLevel > 0">
+            Level {{ complaint.escalationLevel }} Escalated
+          </span>
+        </div>
+        <h1 class="title-en">{{ complaint.titleEn }}</h1>
+        <p class="title-hi" *ngIf="complaint.titleHi">{{ complaint.titleHi }}</p>
+
+        <div class="badges-row">
+          <vp-complaint-status-badge [status]="complaint.status"></vp-complaint-status-badge>
+          <vp-priority-badge [priority]="complaint.priority"></vp-priority-badge>
+        </div>
+      </div>
+
+      <!-- Vote button -->
+      <div class="vote-col" *ngIf="canVote()">
+        <button mat-stroked-button [color]="complaint.hasVoted ? 'primary' : ''"
+                (click)="toggleVote()" [disabled]="voting" class="vote-btn">
+          <mat-icon>{{ complaint.hasVoted ? 'thumb_up' : 'thumb_up_off_alt' }}</mat-icon>
+          <span>{{ complaint.hasVoted ? 'Supported' : 'Support' }}</span>
+        </button>
+        <span class="support-count">{{ complaint.supportCount }} supporters</span>
+      </div>
+      <div class="vote-col" *ngIf="!canVote()">
+        <div class="support-display">
+          <mat-icon>thumb_up</mat-icon>
+          <span>{{ complaint.supportCount }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Meta info grid -->
+    <div class="meta-grid">
+      <div class="meta-item"><span class="meta-label">Category</span><span>{{ complaint.categoryNameEn }}</span></div>
+      <div class="meta-item"><span class="meta-label">Ward</span><span>{{ complaint.wardNumber }}</span></div>
+      <div class="meta-item"><span class="meta-label">Location</span><span>{{ complaint.locationText }}</span></div>
+      <div class="meta-item"><span class="meta-label">Submitted by</span><span>{{ complaint.submitterDisplayName }}</span></div>
+      <div class="meta-item" *ngIf="complaint.assignedOfficerName">
+        <span class="meta-label">Assigned Officer</span><span>{{ complaint.assignedOfficerName }}</span>
+      </div>
+      <div class="meta-item" *ngIf="complaint.dueDate">
+        <span class="meta-label">Due Date</span>
+        <span [class.overdue]="complaint.isOverdue">
+          {{ complaint.dueDate | date:'dd MMM yyyy' }}
+          <span *ngIf="complaint.isOverdue"> ⚠ Overdue</span>
+        </span>
+      </div>
+      <div class="meta-item"><span class="meta-label">Filed On</span><span>{{ complaint.createdAt | date:'dd MMM yyyy, h:mm a' }}</span></div>
+    </div>
+  </mat-card>
+
+  <!-- Tabs -->
+  <mat-tab-group animationDuration="200ms" class="detail-tabs">
+
+    <!-- Description tab -->
+    <mat-tab label="Description">
+      <div class="tab-content">
+        <h3>Description (English)</h3>
+        <p class="description">{{ complaint.descriptionEn }}</p>
+        <h3 *ngIf="complaint.descriptionHi">विवरण (हिंदी)</h3>
+        <p class="description hi-text" *ngIf="complaint.descriptionHi">{{ complaint.descriptionHi }}</p>
+      </div>
+    </mat-tab>
+
+    <!-- Timeline tab -->
+    <mat-tab label="Timeline ({{ complaint.timeline.length }})">
+      <div class="tab-content">
+        <div class="timeline">
+          <div class="timeline-item" *ngFor="let t of complaint.timeline">
+            <div class="timeline-dot" [class.system-dot]="t.actorRole === 'SYSTEM'"></div>
+            <div class="timeline-content">
+              <div class="timeline-header">
+                <span class="actor">{{ t.actorName }} ({{ t.actorRole }})</span>
+                <span class="time">{{ t.createdAt | date:'dd MMM, h:mm a' }}</span>
+              </div>
+              <div class="status-change" *ngIf="t.fromStatus !== t.toStatus">
+                <vp-complaint-status-badge *ngIf="t.fromStatus" [status]="t.fromStatus"></vp-complaint-status-badge>
+                <mat-icon>arrow_forward</mat-icon>
+                <vp-complaint-status-badge [status]="t.toStatus"></vp-complaint-status-badge>
+              </div>
+              <p class="timeline-note" *ngIf="t.note">{{ t.note }}</p>
+              <span class="private-tag" *ngIf="!t.isPublicNote">Internal note</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- Evidence tab -->
+    <mat-tab label="Evidence ({{ complaint.evidence.length }})">
+      <div class="tab-content">
+        <div *ngIf="complaint.evidence.length === 0" class="no-evidence">
+          No evidence uploaded yet.
+        </div>
+        <div class="evidence-grid">
+          <mat-card class="evidence-card" *ngFor="let e of complaint.evidence">
+            <div class="evidence-preview" *ngIf="isImage(e.fileType)">
+              <img [src]="getDownloadUrl(e.id)" [alt]="e.originalFileName"
+                   (error)="$any($event.target).style.display='none'">
+            </div>
+            <div class="evidence-doc" *ngIf="!isImage(e.fileType)">
+              <mat-icon>description</mat-icon>
+            </div>
+            <mat-card-content>
+              <p class="evidence-name">{{ e.originalFileName }}</p>
+              <p class="evidence-meta">{{ formatEvidenceType(e.evidenceType) }} · {{ e.fileSizeKb }}KB</p>
+              <p class="evidence-meta">Uploaded by {{ e.uploadedByName }}</p>
+              <a mat-stroked-button [href]="getDownloadUrl(e.id)" target="_blank" download>
+                <mat-icon>download</mat-icon> Download
+              </a>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- Resolution tab (when resolved/closed) -->
+    <mat-tab *ngIf="complaint.resolutionNote" label="Resolution">
+      <div class="tab-content">
+        <div class="resolution-box">
+          <mat-icon class="resolved-icon">check_circle</mat-icon>
+          <h3>Resolution Note</h3>
+          <p>{{ complaint.resolutionNote }}</p>
+          <p class="meta-text" *ngIf="complaint.resolvedAt">
+            Resolved on {{ complaint.resolvedAt | date:'dd MMM yyyy' }}
+          </p>
+          <p class="meta-text" *ngIf="complaint.citizenResponseDeadline && complaint.status === 'RESOLVED'">
+            Citizen response deadline: {{ complaint.citizenResponseDeadline | date:'dd MMM yyyy' }}
+          </p>
+        </div>
+
+        <!-- Resident response buttons -->
+        <div class="resolution-actions" *ngIf="canRespondToResolution()">
+          <p><strong>Do you accept this resolution?</strong></p>
+          <button mat-raised-button color="primary" (click)="acceptResolution()">
+            <mat-icon>check</mat-icon> Accept Resolution
+          </button>
+          <button mat-stroked-button color="warn" (click)="rejectResolution()">
+            <mat-icon>close</mat-icon> Reject — Issue Not Resolved
+          </button>
+        </div>
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+
+  <!-- Rejection reason banner -->
+  <div class="rejection-banner" *ngIf="complaint.status === 'REJECTED' && complaint.rejectionReason">
+    <mat-icon>cancel</mat-icon>
+    <span>Rejected: {{ complaint.rejectionReason }}</span>
+  </div>
+
+</div>
+
+<!-- Loading -->
+<div class="loading-center" *ngIf="loading">
+  <mat-spinner diameter="48"></mat-spinner>
+</div>

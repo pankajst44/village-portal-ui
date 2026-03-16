@@ -48,12 +48,21 @@ export class FundListComponent implements OnInit {
   load(): void {
     this.loading = true;
     this.error   = false;
-    this.fundSvc.getAllFunds(this.page, this.pageSize).subscribe({
+    // ✅ Public endpoint — no auth required
+    this.fundSvc.getPublicFunds(this.page, this.pageSize).subscribe({
       next: res => {
-        this.funds         = res.data?.content ?? [];
-        this.totalElements = res.data?.totalElements ?? 0;
-        this.totalPages    = res.data?.totalPages ?? 0;
-        this.loading       = false;
+        // getPublicFunds returns PageResponse<Fund> | Fund[]
+        const data = res.data as any;
+        if (data?.content) {
+          this.funds         = data.content;
+          this.totalElements = data.totalElements ?? 0;
+          this.totalPages    = data.totalPages    ?? 0;
+        } else {
+          this.funds         = Array.isArray(data) ? data : [];
+          this.totalElements = this.funds.length;
+          this.totalPages    = 1;
+        }
+        this.loading = false;
       },
       error: () => { this.loading = false; this.error = true; }
     });

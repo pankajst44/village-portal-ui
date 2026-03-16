@@ -35,7 +35,7 @@ export class UserManagementComponent implements OnInit {
   showPassword = false;
   showConfirm  = false;
 
-  readonly roles: Role[] = ['ADMIN', 'OFFICER', 'AUDITOR'];
+  readonly roles: Role[] = ['ADMIN', 'OFFICER', 'AUDITOR', 'RESIDENT'];
 
   constructor(
     private userSvc:  UserService,
@@ -192,11 +192,11 @@ export class UserManagementComponent implements OnInit {
   // ── Helpers ───────────────────────────────────────────
 
   getRoleIcon(role: Role): string {
-    return { ADMIN: 'admin_panel_settings', OFFICER: 'badge', AUDITOR: 'manage_search' }[role] ?? 'person';
+    return { ADMIN: 'admin_panel_settings', OFFICER: 'badge', AUDITOR: 'manage_search', RESIDENT: 'person' }[role] ?? 'person';
   }
 
   getRoleColor(role: Role): string {
-    return { ADMIN: '#c62828', OFFICER: '#1565c0', AUDITOR: '#6a1b9a' }[role] ?? '#546e7a';
+    return { ADMIN: '#c62828', OFFICER: '#1565c0', AUDITOR: '#6a1b9a', RESIDENT: '#2e7d32' }[role] ?? '#546e7a';
   }
 
   fieldError(form: FormGroup, field: string): string {

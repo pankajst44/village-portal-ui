@@ -27,6 +27,8 @@ export class DashboardComponent implements OnInit {
   userName        = '';
   currentLang     = 'en';
   loading         = true;
+  isLoggedIn      = false;
+  isResident      = false;
 
   projectStatusCounts: { status: ProjectStatus; count: number; color: string }[] = [];
 
@@ -44,7 +46,9 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit(): void {
     const user = this.auth.getUser();
-    this.userName = user?.fullName ?? user?.username ?? '';
+    this.userName   = user?.fullName ?? user?.username ?? '';
+    this.isLoggedIn = this.auth.isLoggedInSnapshot();
+    this.isResident = this.auth.getRole() === 'RESIDENT';
     this.langSvc.currentLang.subscribe(l => this.currentLang = l);
     this.loadDashboard();
   }
@@ -53,7 +57,7 @@ export class DashboardComponent implements OnInit {
     this.loading = true;
     forkJoin({
       projects: this.projectSvc.getPublicProjects(0, 100).pipe(catchError(() => of(null))),
-      // ✅ public endpoint — no auth token needed, no 403
+      // ✅ Use public endpoint — no auth required
       funds:    this.fundSvc.getPublicFundsByStatus('ACTIVE').pipe(catchError(() => of(null))),
     }).subscribe(({ projects, funds }) => {
       const allProjects = projects?.data?.content ?? [];

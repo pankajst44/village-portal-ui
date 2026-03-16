@@ -1,0 +1,41 @@
+<div class="cms-page">
+  <div class="page-header">
+    <h1 class="page-title"><mat-icon>history</mat-icon> My Complaints</h1>
+    <a mat-raised-button color="primary" routerLink="/complaints/submit">
+      <mat-icon>add</mat-icon> New Complaint
+    </a>
+  </div>
+
+  <div class="loading-row" *ngIf="loading"><mat-spinner diameter="40"></mat-spinner></div>
+
+  <div class="empty-state" *ngIf="!loading && complaints.length === 0">
+    <mat-icon>inbox</mat-icon>
+    <p>You haven't filed any complaints yet.</p>
+    <a mat-raised-button color="primary" routerLink="/complaints/submit">File First Complaint</a>
+  </div>
+
+  <div class="complaint-list" *ngIf="!loading">
+    <mat-card class="complaint-row" *ngFor="let c of complaints"
+              [routerLink]="['/complaints', c.complaintNumber]">
+      <mat-card-content>
+        <div class="row-left">
+          <span class="num">{{ c.complaintNumber }}</span>
+          <div>
+            <h3 class="title">{{ c.titleEn }}</h3>
+            <span class="category">{{ c.categoryNameEn }} · Ward {{ c.wardNumber }}</span>
+          </div>
+        </div>
+        <div class="row-right">
+          <vp-complaint-status-badge [status]="c.status"></vp-complaint-status-badge>
+          <span class="date">{{ c.createdAt | date:'dd MMM yyyy' }}</span>
+          <mat-icon class="arrow">arrow_forward_ios</mat-icon>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <mat-paginator *ngIf="total > pageSize"
+    [length]="total" [pageSize]="pageSize" [pageIndex]="page"
+    (page)="onPage($event)" showFirstLastButtons>
+  </mat-paginator>
+</div>

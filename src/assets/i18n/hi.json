@@ -17,7 +17,17 @@
     "login": "लॉगिन",
     "updateProject": "परियोजना अपडेट",
     "uploadDoc": "दस्तावेज़ अपलोड",
-    "auditReview": "ऑडिट समीक्षा"
+    "auditReview": "ऑडिट समीक्षा",
+    "switchLang": "भाषा बदलें",
+    "cms": {
+      "complaints": "शिकायतें",
+      "myComplaints": "मेरी शिकायतें",
+      "submitComplaint": "शिकायत दर्ज करें",
+      "notifications": "सूचनाएं",
+      "officerQueue": "मेरी सूची",
+      "adminPanel": "CMS प्रशासन",
+      "register": "निवासी पंजीकरण"
+    }
   },
   "dashboard": {
     "title": "ग्राम विकास डैशबोर्ड",
@@ -247,5 +257,41 @@
     "english": "English",
     "hindi": "हिंदी",
     "switch": "भाषा बदलें"
+  },
+  "cms": {
+    "status": {
+      "DRAFT": "मसौदा",
+      "SUBMITTED": "दर्ज",
+      "VERIFIED": "सत्यापित",
+      "ASSIGNED": "सौंपा गया",
+      "IN_PROGRESS": "प्रगति पर",
+      "RESOLVED": "समाधान",
+      "CLOSED": "बंद",
+      "REJECTED": "अस्वीकृत"
+    },
+    "priority": {
+      "LOW": "कम",
+      "MEDIUM": "मध्यम",
+      "HIGH": "उच्च",
+      "CRITICAL": "अति गंभीर"
+    },
+    "complaint": {
+      "title": "शिकायतें",
+      "fileNew": "शिकायत दर्ज करें",
+      "noComplaints": "कोई शिकायत नहीं मिली",
+      "submittedBy": "द्वारा दर्ज",
+      "assignedTo": "सौंपा गया",
+      "ward": "वार्ड",
+      "category": "श्रेणी",
+      "location": "स्थान",
+      "supporters": "समर्थक",
+      "dueDate": "अंतिम तिथि",
+      "overdue": "समय सीमा पार",
+      "timeline": "समयरेखा",
+      "evidence": "साक्ष्य",
+      "resolution": "समाधान",
+      "acceptResolution": "समाधान स्वीकार करें",
+      "rejectResolution": "समाधान अस्वीकार करें"
+    }
   }
 }

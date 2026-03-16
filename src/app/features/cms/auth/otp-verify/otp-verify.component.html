@@ -1,0 +1,64 @@
+<div class="cms-auth-page">
+  <mat-card class="cms-auth-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar class="auth-icon">verified_user</mat-icon>
+      <mat-card-title>Verify Your Phone</mat-card-title>
+      <mat-card-subtitle>अपना मोबाइल सत्यापित करें</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+
+      <!-- Step 1: Enter phone -->
+      <form *ngIf="step === 'send'" [formGroup]="sendForm" (ngSubmit)="sendOtp()" novalidate>
+        <p class="step-hint">Enter your registered mobile number to receive an OTP.</p>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Mobile Number</mat-label>
+          <input matInput formControlName="phone" placeholder="9876543210" maxlength="10" inputmode="tel">
+          <span matTextPrefix>+91&nbsp;</span>
+          <mat-icon matSuffix>phone</mat-icon>
+          <mat-error *ngIf="sf['phone'].hasError('required')">Mobile number is required</mat-error>
+          <mat-error *ngIf="sf['phone'].hasError('pattern')">Enter valid 10-digit mobile number</mat-error>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" type="submit" class="submit-btn" [disabled]="loading">
+          <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+          <span *ngIf="!loading">Send OTP</span>
+        </button>
+      </form>
+
+      <!-- Step 2: Enter OTP -->
+      <form *ngIf="step === 'verify'" [formGroup]="verifyForm" (ngSubmit)="verifyOtp()" novalidate>
+        <p class="step-hint">
+          OTP sent to <strong>+91{{ sf['phone'].value }}</strong>.
+          Check your SMS. <br>
+          <em>(Dev mode: check Spring Boot console log)</em>
+        </p>
+
+        <mat-form-field appearance="outline" class="full-width otp-field">
+          <mat-label>Enter 6-digit OTP</mat-label>
+          <input matInput formControlName="otp" placeholder="• • • • • •"
+                 maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+          <mat-icon matSuffix>lock</mat-icon>
+          <mat-error *ngIf="vf['otp'].hasError('required')">OTP is required</mat-error>
+          <mat-error *ngIf="vf['otp'].hasError('pattern')">Enter 6-digit OTP</mat-error>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" type="submit" class="submit-btn" [disabled]="loading">
+          <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+          <span *ngIf="!loading">Verify OTP / सत्यापित करें</span>
+        </button>
+
+        <div class="resend-row">
+          <span *ngIf="resendCooldown > 0" class="cooldown-text">
+            Resend in {{ resendCooldown }}s
+          </span>
+          <button mat-button type="button" *ngIf="resendCooldown === 0" (click)="resendOtp()">
+            Resend OTP
+          </button>
+        </div>
+      </form>
+
+    </mat-card-content>
+  </mat-card>
+</div>

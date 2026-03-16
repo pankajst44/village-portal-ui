@@ -5,6 +5,7 @@ export interface LoginRequest {
 }
 
 export interface AuthResponse {
+  id?:          number;
   accessToken:  string;
   refreshToken: string;
   tokenType:    string;
@@ -33,7 +34,7 @@ export interface PageResponse<T> {
 }
 
 // ── Enums ─────────────────────────────────────────────────
-export type Role = 'ADMIN' | 'OFFICER' | 'AUDITOR';
+export type Role = 'ADMIN' | 'OFFICER' | 'AUDITOR' | 'RESIDENT';
 
 export type FundSource  = 'CENTRAL_GOVT' | 'STATE_GOVT' | 'PANCHAYAT' | 'OTHER';
 export type FundStatus  = 'PENDING' | 'ACTIVE' | 'CLOSED';

@@ -1,0 +1,76 @@
+<div class="cms-auth-page">
+  <mat-card class="cms-auth-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar class="auth-icon">how_to_reg</mat-icon>
+      <mat-card-title>Register as Resident</mat-card-title>
+      <mat-card-subtitle>ग्राम पोर्टल — निवासी पंजीकरण</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Full Name / पूरा नाम</mat-label>
+          <input matInput formControlName="fullName" placeholder="Ramesh Kumar">
+          <mat-icon matSuffix>person</mat-icon>
+          <mat-error *ngIf="f['fullName'].hasError('required')">Full name is required</mat-error>
+          <mat-error *ngIf="f['fullName'].hasError('minlength')">Minimum 3 characters</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Username</mat-label>
+          <input matInput formControlName="username" placeholder="ramesh_ward1" autocomplete="username">
+          <mat-icon matSuffix>badge</mat-icon>
+          <mat-error *ngIf="f['username'].hasError('required')">Username is required</mat-error>
+          <mat-error *ngIf="f['username'].hasError('pattern')">Only letters, numbers and underscore</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Password</mat-label>
+          <input matInput formControlName="password" [type]="hidePassword ? 'password' : 'text'"
+                 autocomplete="new-password">
+          <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword">
+            <mat-icon>{{ hidePassword ? 'visibility' : 'visibility_off' }}</mat-icon>
+          </button>
+          <mat-hint>Minimum 8 characters with at least one letter and number</mat-hint>
+          <mat-error *ngIf="f['password'].hasError('required')">Password is required</mat-error>
+          <mat-error *ngIf="f['password'].hasError('pattern')">Must contain letters and numbers</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Mobile Number / मोबाइल नंबर</mat-label>
+          <input matInput formControlName="phone" placeholder="9876543210" maxlength="10" inputmode="tel">
+          <span matTextPrefix>+91&nbsp;</span>
+          <mat-icon matSuffix>phone</mat-icon>
+          <mat-hint>10-digit Indian mobile number</mat-hint>
+          <mat-error *ngIf="f['phone'].hasError('required')">Mobile number is required</mat-error>
+          <mat-error *ngIf="f['phone'].hasError('pattern')">Enter valid 10-digit mobile number</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Ward Number / वार्ड संख्या</mat-label>
+          <mat-select formControlName="wardNumber">
+            <mat-option *ngFor="let w of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]" [value]="w">
+              Ward {{ w }} — वार्ड {{ w }}
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="f['wardNumber'].hasError('required')">Ward number is required</mat-error>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" type="submit"
+                class="submit-btn" [disabled]="loading">
+          <mat-spinner *ngIf="loading" diameter="20" class="btn-spinner"></mat-spinner>
+          <span *ngIf="!loading">Register / पंजीकरण करें</span>
+        </button>
+
+      </form>
+    </mat-card-content>
+
+    <mat-card-actions align="end">
+      <span class="login-link">
+        Already registered?
+        <a routerLink="/login">Login / लॉगिन</a>
+      </span>
+    </mat-card-actions>
+  </mat-card>
+</div>

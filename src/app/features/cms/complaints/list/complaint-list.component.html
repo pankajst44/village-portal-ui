@@ -1,0 +1,128 @@
+<div class="cms-page">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        <mat-icon>report_problem</mat-icon> Complaints / शिकायतें
+      </h1>
+      <p class="page-sub">Public complaints from village residents</p>
+    </div>
+    <a mat-raised-button color="primary" routerLink="/complaints/submit">
+      <mat-icon>add</mat-icon> File Complaint
+    </a>
+  </div>
+
+  <!-- Filters -->
+  <mat-card class="filter-card">
+    <form [formGroup]="filterForm" class="filter-row">
+      <mat-form-field appearance="outline" class="filter-search">
+        <mat-label>Search complaints</mat-label>
+        <input matInput formControlName="search" placeholder="Water supply, road, electricity...">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filter-select">
+        <mat-label>Status</mat-label>
+        <mat-select formControlName="status">
+          <mat-option *ngFor="let s of statuses" [value]="s.value">{{ s.label }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filter-select">
+        <mat-label>Category</mat-label>
+        <mat-select formControlName="categoryId">
+          <mat-option value="">All Categories</mat-option>
+          <mat-option *ngFor="let c of categories" [value]="c.id">{{ c.nameEn }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filter-ward">
+        <mat-label>Ward</mat-label>
+        <input matInput formControlName="wardNumber" type="number" min="1" max="20" placeholder="1-20">
+      </mat-form-field>
+
+      <button mat-stroked-button type="button" (click)="clearFilters()">
+        <mat-icon>clear</mat-icon> Clear
+      </button>
+    </form>
+  </mat-card>
+
+  <!-- Loading -->
+  <div class="loading-row" *ngIf="loading">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+
+  <!-- Empty state -->
+  <div class="empty-state" *ngIf="!loading && complaints.length === 0">
+    <mat-icon>inbox</mat-icon>
+    <p>No complaints found</p>
+    <p class="empty-sub">Try adjusting filters or be the first to file a complaint.</p>
+  </div>
+
+  <!-- Complaint cards -->
+  <div class="complaint-grid" *ngIf="!loading && complaints.length > 0">
+    <mat-card class="complaint-card" *ngFor="let c of complaints"
+              [routerLink]="['/complaints', c.complaintNumber]"
+              [class.overdue]="c.isOverdue">
+
+      <mat-card-header>
+        <div class="card-header-row">
+          <span class="complaint-number">{{ c.complaintNumber }}</span>
+          <div class="badges-row">
+            <vp-complaint-status-badge [status]="c.status"></vp-complaint-status-badge>
+            <vp-priority-badge [priority]="c.priority"></vp-priority-badge>
+          </div>
+        </div>
+      </mat-card-header>
+
+      <mat-card-content>
+        <h3 class="complaint-title">{{ c.titleEn }}</h3>
+        <p class="complaint-title-hi" *ngIf="c.titleHi">{{ c.titleHi }}</p>
+
+        <div class="meta-row">
+          <span class="meta-item">
+            <mat-icon>category</mat-icon> {{ c.categoryNameEn }}
+          </span>
+          <span class="meta-item">
+            <mat-icon>location_on</mat-icon> Ward {{ c.wardNumber }}
+          </span>
+          <span class="meta-item" *ngIf="c.escalationLevel > 0">
+            <mat-icon class="escalation-icon">trending_up</mat-icon>
+            Level {{ c.escalationLevel }}
+          </span>
+        </div>
+
+        <p class="location-text">{{ c.locationText }}</p>
+
+        <div class="card-footer">
+          <span class="submitter">
+            <mat-icon>person</mat-icon> {{ c.submitterDisplayName }}
+          </span>
+          <span class="support-count">
+            <mat-icon>thumb_up</mat-icon> {{ c.supportCount }}
+          </span>
+          <span class="due-date" *ngIf="c.dueDate" [class.overdue-text]="c.isOverdue">
+            <mat-icon>schedule</mat-icon>
+            {{ c.isOverdue ? 'Overdue' : 'Due ' + (c.dueDate | date:'dd MMM') }}
+          </span>
+          <span class="created-date">
+            {{ c.createdAt | date:'dd MMM yyyy' }}
+          </span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Pagination -->
+  <mat-paginator
+    *ngIf="total > 0"
+    [length]="total"
+    [pageSize]="pageSize"
+    [pageSizeOptions]="[10, 20, 50]"
+    [pageIndex]="page"
+    (page)="onPage($event)"
+    showFirstLastButtons>
+  </mat-paginator>
+
+</div>

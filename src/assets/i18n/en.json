@@ -17,7 +17,17 @@
     "login": "Login",
     "updateProject": "Update Project",
     "uploadDoc": "Upload Document",
-    "auditReview": "Audit Review"
+    "auditReview": "Audit Review",
+    "switchLang": "Switch Language",
+    "cms": {
+      "complaints": "Complaints",
+      "myComplaints": "My Complaints",
+      "submitComplaint": "File Complaint",
+      "notifications": "Notifications",
+      "officerQueue": "My Queue",
+      "adminPanel": "CMS Admin",
+      "register": "Register as Resident"
+    }
   },
   "dashboard": {
     "title": "Village Development Dashboard",
@@ -247,5 +257,41 @@
     "english": "English",
     "hindi": "हिंदी",
     "switch": "Switch Language"
+  },
+  "cms": {
+    "status": {
+      "DRAFT": "Draft",
+      "SUBMITTED": "Submitted",
+      "VERIFIED": "Verified",
+      "ASSIGNED": "Assigned",
+      "IN_PROGRESS": "In Progress",
+      "RESOLVED": "Resolved",
+      "CLOSED": "Closed",
+      "REJECTED": "Rejected"
+    },
+    "priority": {
+      "LOW": "Low",
+      "MEDIUM": "Medium",
+      "HIGH": "High",
+      "CRITICAL": "Critical"
+    },
+    "complaint": {
+      "title": "Complaints",
+      "fileNew": "File a Complaint",
+      "noComplaints": "No complaints found",
+      "submittedBy": "Submitted by",
+      "assignedTo": "Assigned to",
+      "ward": "Ward",
+      "category": "Category",
+      "location": "Location",
+      "supporters": "Supporters",
+      "dueDate": "Due Date",
+      "overdue": "Overdue",
+      "timeline": "Timeline",
+      "evidence": "Evidence",
+      "resolution": "Resolution",
+      "acceptResolution": "Accept Resolution",
+      "rejectResolution": "Reject Resolution"
+    }
   }
 }

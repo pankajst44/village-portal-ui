@@ -74,8 +74,10 @@ export class ProjectDetailComponent implements OnInit, OnDestroy {
       if (!project?.data) { this.error = true; this.loading = false; return; }
       this.project   = project.data;
       const allDocs  = docs?.data ?? [];
-      this.images    = allDocs.filter(d => d.documentType === 'PHOTO' || this.isImage(d));
-      this.documents = allDocs.filter(d => !this.isImage(d));
+      // Photos tab: documentType is PHOTO
+      this.images    = allDocs.filter(d => d.documentType === 'PHOTO');
+      // Documents tab: everything that is NOT a PHOTO
+      this.documents = allDocs.filter(d => d.documentType !== 'PHOTO');
 
       // Load fund if linked
       if (this.project.fundId) {

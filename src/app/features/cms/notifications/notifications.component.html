@@ -1,0 +1,49 @@
+<div class="cms-page">
+  <div class="page-header">
+    <h1 class="page-title">
+      <mat-icon [matBadge]="unreadCount > 0 ? unreadCount : ''" matBadgeColor="warn">notifications</mat-icon>
+      Notifications
+    </h1>
+    <button mat-stroked-button (click)="markAllRead()" *ngIf="unreadCount > 0">
+      <mat-icon>done_all</mat-icon> Mark all as read
+    </button>
+  </div>
+
+  <div class="loading-row" *ngIf="loading"><mat-spinner diameter="40"></mat-spinner></div>
+
+  <div class="empty-state" *ngIf="!loading && notifications.length === 0">
+    <mat-icon>notifications_none</mat-icon>
+    <p>No notifications yet</p>
+  </div>
+
+  <div class="notif-list" *ngIf="!loading">
+    <mat-card class="notif-card" *ngFor="let n of notifications"
+              [class.unread]="!n.isRead"
+              (click)="markRead(n)"
+              [routerLink]="n.complaintNumber ? ['/complaints', n.complaintNumber] : null">
+
+      <div class="notif-icon-col">
+        <mat-icon class="notif-icon" [class.unread-icon]="!n.isRead">
+          {{ notificationIcon(n.notificationType) }}
+        </mat-icon>
+        <div class="unread-dot" *ngIf="!n.isRead"></div>
+      </div>
+
+      <div class="notif-body">
+        <div class="notif-title">{{ n.titleEn }}</div>
+        <div class="notif-message">{{ n.messageEn }}</div>
+        <div class="notif-meta">
+          <span *ngIf="n.complaintNumber" class="complaint-ref">{{ n.complaintNumber }}</span>
+          <span class="notif-time">{{ n.createdAt | date:'dd MMM, h:mm a' }}</span>
+        </div>
+      </div>
+
+      <mat-icon class="notif-arrow" *ngIf="n.complaintNumber">arrow_forward_ios</mat-icon>
+    </mat-card>
+  </div>
+
+  <mat-paginator *ngIf="total > pageSize"
+    [length]="total" [pageSize]="pageSize" [pageIndex]="page"
+    (page)="onPage($event)" showFirstLastButtons>
+  </mat-paginator>
+</div>

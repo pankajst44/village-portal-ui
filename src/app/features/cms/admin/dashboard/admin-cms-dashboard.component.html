@@ -1,0 +1,241 @@
+<div class="admin-cms-layout">
+
+  <!-- Left: filters + list -->
+  <div class="list-panel">
+
+    <!-- Stats strip -->
+    <div class="stats-strip" *ngIf="stats">
+      <div class="stat-item" title="Total"><mat-icon>list</mat-icon><span>{{ stats.total }}</span></div>
+      <div class="stat-item submitted" title="Awaiting review"><mat-icon>hourglass_empty</mat-icon><span>{{ stats.submitted }}</span></div>
+      <div class="stat-item inprogress" title="In Progress"><mat-icon>pending</mat-icon><span>{{ stats.inProgress }}</span></div>
+      <div class="stat-item overdue" title="Overdue"><mat-icon>warning</mat-icon><span>{{ stats.overdue }}</span></div>
+      <div class="stat-item escalated" title="Escalated"><mat-icon>trending_up</mat-icon><span>{{ stats.escalated }}</span></div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <form [formGroup]="filterForm" class="filter-form">
+        <mat-select formControlName="status" placeholder="Status">
+          <mat-option *ngFor="let s of statuses" [value]="s.value">{{ s.label }}</mat-option>
+        </mat-select>
+        <mat-select formControlName="priority" placeholder="Priority">
+          <mat-option value="">All Priority</mat-option>
+          <mat-option *ngFor="let p of priorities" [value]="p">{{ p }}</mat-option>
+        </mat-select>
+        <mat-select formControlName="categoryId" placeholder="Category">
+          <mat-option value="">All Categories</mat-option>
+          <mat-option *ngFor="let c of categories" [value]="c.id">{{ c.nameEn }}</mat-option>
+        </mat-select>
+        <mat-slide-toggle formControlName="escalatedOnly" color="warn">Escalated only</mat-slide-toggle>
+      </form>
+    </div>
+
+    <div class="loading-row" *ngIf="loading"><mat-spinner diameter="32"></mat-spinner></div>
+
+    <div class="complaint-item" *ngFor="let c of complaints"
+         [class.selected]="selected?.id === c.id"
+         [class.overdue]="c.isOverdue"
+         (click)="selectComplaint(c)">
+      <div class="item-top">
+        <span class="item-num">{{ c.complaintNumber }}</span>
+        <vp-complaint-status-badge [status]="c.status"></vp-complaint-status-badge>
+      </div>
+      <p class="item-title">{{ c.titleEn }}</p>
+      <div class="item-bottom">
+        <span class="ward">Ward {{ c.wardNumber }}</span>
+        <vp-priority-badge [priority]="c.priority"></vp-priority-badge>
+        <span class="date">{{ c.createdAt | date:'dd MMM' }}</span>
+        <mat-icon *ngIf="c.escalationLevel > 0" class="escalation-icon" [matTooltip]="'Escalated level ' + c.escalationLevel">trending_up</mat-icon>
+      </div>
+    </div>
+
+    <mat-paginator *ngIf="total > pageSize" [length]="total" [pageSize]="pageSize"
+      [pageIndex]="page" (page)="onPage($event)" class="compact-pager">
+    </mat-paginator>
+  </div>
+
+  <!-- Right: detail + admin actions -->
+  <div class="detail-panel" *ngIf="selected; else noSelection">
+
+    <div class="detail-header">
+      <div>
+        <div class="num-row">
+          <span class="complaint-num">{{ selected.complaintNumber }}</span>
+          <span class="escalation-badge" *ngIf="selected.escalationLevel > 0">Level {{ selected.escalationLevel }}</span>
+        </div>
+        <h2>{{ selected.titleEn }}</h2>
+        <div class="badges-row">
+          <vp-complaint-status-badge [status]="selected.status"></vp-complaint-status-badge>
+          <vp-priority-badge [priority]="selected.priority"></vp-priority-badge>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin action toolbar -->
+    <div class="action-toolbar">
+      <button mat-stroked-button color="primary" *ngIf="canVerify()" (click)="activeAction = 'verify'">
+        <mat-icon>verified</mat-icon> Verify
+      </button>
+      <button mat-stroked-button color="warn" *ngIf="canReject()" (click)="activeAction = 'reject'">
+        <mat-icon>cancel</mat-icon> Reject
+      </button>
+      <button mat-stroked-button *ngIf="canAssign()" (click)="activeAction = 'assign'">
+        <mat-icon>assignment_ind</mat-icon> Assign
+      </button>
+      <button mat-stroked-button (click)="activeAction = 'priority'">
+        <mat-icon>flag</mat-icon> Priority
+      </button>
+      <button mat-stroked-button (click)="activeAction = 'escalate'">
+        <mat-icon>trending_up</mat-icon> Escalate
+      </button>
+      <button mat-icon-button [matTooltip]="'Toggle visibility'" (click)="toggleVisibility()">
+        <mat-icon>{{ selected.isPublic ? 'visibility' : 'visibility_off' }}</mat-icon>
+      </button>
+    </div>
+
+    <!-- Action panels -->
+    <mat-card class="action-panel" *ngIf="activeAction === 'verify'">
+      <mat-card-content>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Verification note (optional)</mat-label>
+          <input matInput [(ngModel)]="verifyNote" placeholder="Complaint verified after review">
+        </mat-form-field>
+      </mat-card-content>
+      <mat-card-actions align="end">
+        <button mat-button (click)="activeAction = null">Cancel</button>
+        <button mat-raised-button color="primary" (click)="verify()" [disabled]="submitting">Verify</button>
+      </mat-card-actions>
+    </mat-card>
+
+    <mat-card class="action-panel" *ngIf="activeAction === 'reject'">
+      <mat-card-content>
+        <form [formGroup]="rejectForm">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Rejection reason *</mat-label>
+            <textarea matInput formControlName="reason" rows="3"></textarea>
+            <mat-error>Reason is required</mat-error>
+          </mat-form-field>
+        </form>
+      </mat-card-content>
+      <mat-card-actions align="end">
+        <button mat-button (click)="activeAction = null">Cancel</button>
+        <button mat-raised-button color="warn" (click)="reject()" [disabled]="submitting">Reject</button>
+      </mat-card-actions>
+    </mat-card>
+
+    <mat-card class="action-panel" *ngIf="activeAction === 'assign'">
+      <mat-card-content>
+        <form [formGroup]="assignForm">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Officer ID *</mat-label>
+            <input matInput formControlName="officerId" type="number" placeholder="Enter officer user ID">
+            <mat-hint>Get officer IDs from User Management</mat-hint>
+            <mat-error>Officer ID required</mat-error>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Due Date (optional)</mat-label>
+            <input matInput [matDatepicker]="dp" formControlName="dueDate">
+            <mat-datepicker-toggle matSuffix [for]="dp"></mat-datepicker-toggle>
+            <mat-datepicker #dp></mat-datepicker>
+            <mat-hint>Defaults to category SLA days if not set</mat-hint>
+          </mat-form-field>
+        </form>
+      </mat-card-content>
+      <mat-card-actions align="end">
+        <button mat-button (click)="activeAction = null">Cancel</button>
+        <button mat-raised-button color="primary" (click)="assign()" [disabled]="submitting">Assign</button>
+      </mat-card-actions>
+    </mat-card>
+
+    <mat-card class="action-panel" *ngIf="activeAction === 'priority'">
+      <mat-card-content>
+        <mat-form-field appearance="outline">
+          <mat-label>New Priority</mat-label>
+          <mat-select [(ngModel)]="selectedPriority">
+            <mat-option *ngFor="let p of priorities" [value]="p">{{ p }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </mat-card-content>
+      <mat-card-actions align="end">
+        <button mat-button (click)="activeAction = null">Cancel</button>
+        <button mat-raised-button color="primary" (click)="changePriority()">Update Priority</button>
+      </mat-card-actions>
+    </mat-card>
+
+    <mat-card class="action-panel" *ngIf="activeAction === 'escalate'">
+      <mat-card-content>
+        <mat-form-field appearance="outline">
+          <mat-label>Escalation Level</mat-label>
+          <mat-select [(ngModel)]="escalateLevel">
+            <mat-option [value]="1">Level 1</mat-option>
+            <mat-option [value]="2">Level 2</mat-option>
+            <mat-option [value]="3">Level 3 (Maximum)</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Escalation note (optional)</mat-label>
+          <input matInput [(ngModel)]="escalateNote">
+        </mat-form-field>
+      </mat-card-content>
+      <mat-card-actions align="end">
+        <button mat-button (click)="activeAction = null">Cancel</button>
+        <button mat-raised-button color="warn" (click)="escalate()" [disabled]="submitting">Escalate</button>
+      </mat-card-actions>
+    </mat-card>
+
+    <!-- Detail tabs -->
+    <mat-tab-group animationDuration="200ms">
+      <mat-tab label="Details">
+        <div class="tab-body">
+          <div class="info-grid">
+            <div class="info-item"><span class="lbl">Category</span>{{ selected.categoryNameEn }}</div>
+            <div class="info-item"><span class="lbl">Ward</span>{{ selected.wardNumber }}</div>
+            <div class="info-item"><span class="lbl">Location</span>{{ selected.locationText }}</div>
+            <div class="info-item"><span class="lbl">Submitted by</span>{{ selected.submitterDisplayName }}</div>
+            <div class="info-item"><span class="lbl">Supporters</span>{{ selected.supportCount }}</div>
+            <div class="info-item" *ngIf="selected.assignedOfficerName"><span class="lbl">Assigned to</span>{{ selected.assignedOfficerName }}</div>
+            <div class="info-item" *ngIf="selected.dueDate"><span class="lbl">Due</span>{{ selected.dueDate | date:'dd MMM yyyy' }}</div>
+            <div class="info-item"><span class="lbl">Duplicate Flag</span>{{ selected.isDuplicateFlagged ? ('Yes — ' + selected.duplicateOfNumber) : 'No' }}</div>
+          </div>
+          <p class="description">{{ selected.descriptionEn }}</p>
+        </div>
+      </mat-tab>
+      <mat-tab label="Timeline ({{ selected.timeline.length }})">
+        <div class="tab-body">
+          <div class="timeline-item" *ngFor="let t of selected.timeline">
+            <strong>{{ t.actorName }}</strong> · {{ t.createdAt | date:'dd MMM h:mm a' }}
+            <p>{{ t.note }}</p>
+          </div>
+        </div>
+      </mat-tab>
+      <mat-tab label="Evidence ({{ selected.evidence.length }})">
+        <div class="tab-body">
+          <div *ngIf="!selected.evidence.length" class="no-data">No evidence files.</div>
+          <div class="evidence-item" *ngFor="let e of selected.evidence">
+            <mat-icon>{{ e.fileType && e.fileType.startsWith('image') ? 'image' : 'description' }}</mat-icon>
+            <span>{{ e.originalFileName }}</span>
+            <a mat-icon-button [href]="e.downloadUrl" target="_blank"><mat-icon>download</mat-icon></a>
+          </div>
+        </div>
+      </mat-tab>
+      <mat-tab *ngIf="selected.resolutionNote" label="Resolution">
+        <div class="tab-body">
+          <div class="resolution-box">
+            <p>{{ selected.resolutionNote }}</p>
+            <p class="meta" *ngIf="selected.resolvedAt">Resolved: {{ selected.resolvedAt | date:'dd MMM yyyy' }}</p>
+          </div>
+          <p *ngIf="selected.rejectionReason" class="rejection-reason">Rejected: {{ selected.rejectionReason }}</p>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+
+  </div>
+
+  <ng-template #noSelection>
+    <div class="no-selection">
+      <mat-icon>touch_app</mat-icon>
+      <p>Select a complaint to review and take action.</p>
+    </div>
+  </ng-template>
+
+</div>

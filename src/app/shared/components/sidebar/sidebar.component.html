@@ -1,6 +1,5 @@
 <div class="sidebar-inner">
 
-  <!-- Brand mark inside sidenav (visible on mobile) -->
   <div class="sidebar-brand">
     <span class="sidebar-brand-icon">🌿</span>
     <div class="sidebar-brand-text">
@@ -18,7 +17,12 @@
          [routerLink]="item.route"
          routerLinkActive="active-link"
          class="nav-item">
-        <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+        <mat-icon matListItemIcon
+                  [matBadge]="getBadge(item) > 0 ? getBadge(item) : ''"
+                  matBadgeColor="warn"
+                  [matBadgeHidden]="getBadge(item) === 0">
+          {{ item.icon }}
+        </mat-icon>
         <span matListItemTitle>{{ item.label | translate }}</span>
       </a>
     </ng-container>

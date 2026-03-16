@@ -143,3 +143,23 @@
   color: var(--color-text-hint);
   text-align: center;
 }
+
+// ── Register link ───────────────────────────────────────────
+.register-link {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  a {
+    color: var(--color-primary, #1a6b3a);
+    font-weight: 500;
+    text-decoration: none;
+
+    &:hover { text-decoration: underline; }
+  }
+}
